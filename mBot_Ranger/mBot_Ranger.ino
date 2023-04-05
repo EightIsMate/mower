@@ -1,7 +1,8 @@
 #include <MeAuriga.h>
 #include <Arduino.h>
+#include <Wire.h>
 
-
+MeGyro gyro(0, 0x69);
 MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
@@ -14,6 +15,7 @@ void turnRandomLeftAndBacking();
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+  gyro.begin();
   
   //Set PWM 8KHz
   TCCR1A = _BV(WGM10);
@@ -23,11 +25,20 @@ void setup() {
   TCCR2B = _BV(CS21);
 }
 
-void loop() { //read distance in cm
+void loop() { 
   // put your main code here, to run repeatedly:
+
+  //read distance in cm
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
   Serial.println(" cm");
+
+  //read and print Z coordinate from gyro
+  gyro.update();
+  Serial.read();
+  Serial.print(" Z:");
+  Serial.println(gyro.getAngleZ() );
+  delay(10);
 
   moveForward();
   // Serial.print("Speed 1:");
@@ -47,7 +58,7 @@ void loop() { //read distance in cm
         moveBackwards();
       }
       else
-      {
+      { 
         turnRandomLeftAndBacking();
       }
       
@@ -57,10 +68,11 @@ void loop() { //read distance in cm
   }
   Serial.println("I left the if statement and :" + String(ultraSensor.distanceCm()));
 
+
+
   Encoder_1.loop();
   Encoder_2.loop();
   delay(100); /* the minimal measure interval is 100 milliseconds */
-
 }
 
 void moveForward(){
