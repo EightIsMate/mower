@@ -2,6 +2,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#define AURIGARINGLEDNUM  12
+#define RINGALLLEDS        0
+
+
+#ifdef MeAuriga_H
+// on-board LED ring, at PORT0 (onboard), with 12 LEDs
+MeRGBLed led_ring( 0, 12 );
+#endif
+
 MeGyro gyro(0, 0x69);
 MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
@@ -17,6 +26,17 @@ void setup() {
   Serial.begin(115200);
   gyro.begin();
   
+  #ifdef MeAuriga_H
+    // 12 LED Ring controller is on Auriga D44/PWM
+    led_ring.setpin( 44 );
+  #endif
+  
+  while (!Serial)
+  {
+    ; //Wait for serial port to connect to raspberry pi
+  }
+
+  
   //Set PWM 8KHz
   TCCR1A = _BV(WGM10);
   TCCR1B = _BV(CS11) | _BV(WGM12);
@@ -27,7 +47,30 @@ void setup() {
 
 void loop() { 
   // put your main code here, to run repeatedly:
-
+  char raspCom;
+  if (Serial.available() > 0)
+  {  
+    raspCom = Serial.read();
+    switch (raspCom)
+    {
+    case '0':
+      // all LEDs off
+      led_ring.setColor( RINGALLLEDS, 0, 0, 0 );
+      led_ring.show();
+      delay(500);
+      Serial.write("A", 1);
+      break;
+    
+    case '1':
+      led_ring.setColor( RINGALLLEDS, 0, 50, 0 );
+      led_ring.show();
+      delay(500);
+      Serial.write("A", 1);
+    default:
+    Serial.write("E", 1);
+      break;
+    }
+  }
   //read distance in cm
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
