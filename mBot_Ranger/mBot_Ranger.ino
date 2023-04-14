@@ -5,16 +5,24 @@
 #define AURIGARINGLEDNUM  12
 #define RINGALLLEDS        0
 
-
 #ifdef MeAuriga_H
+
 // on-board LED ring, at PORT0 (onboard), with 12 LEDs
 MeRGBLed led_ring( 0, 12 );
+
 #endif
+
+//linefollower sensor 
+MeLineFollower lineFinder(PORT_9);
 
 MeGyro gyro(0, 0x69);
 MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
+
+bool isOnEdge = false;
+bool foundLine = false;
+int sensorState = 0;
 
 void avoidObject();
 void moveForward();
@@ -35,7 +43,6 @@ void setup() {
   {
     ; //Wait for serial port to connect to raspberry pi
   }
-
   
   //Set PWM 8KHz
   TCCR1A = _BV(WGM10);
@@ -45,9 +52,12 @@ void setup() {
   TCCR2B = _BV(CS21);
 }
 
+// put your main code here, to run repeatedly:
 void loop() { 
-  // put your main code here, to run repeatedly:
+  
+  //communication with raspberry pi
   char raspCom;
+
   if (Serial.available() > 0)
   {  
     raspCom = Serial.read();
@@ -71,25 +81,43 @@ void loop() {
       break;
     }
   }
+
   //read distance in cm
+  /*
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
-  Serial.println(" cm");
+  Serial.println(" cm");*/
 
   //read and print Z coordinate from gyro
   gyro.update();
+  /*
   Serial.read();
   Serial.print(" Z:");
-  Serial.println(gyro.getAngleZ() );
-  delay(10);
+  Serial.println(gyro.getAngleZ() );*/
+  
+  int x = 0;
+  int y = 0;
+  /*
 
-  moveForward();
-  // Serial.print("Speed 1:");
-  // Serial.print(Encoder_1.getCurrentSpeed());
-  // Serial.print(" ,Speed 2:");
-  // Serial.println(Encoder_2.getCurrentSpeed());
+  if(x != int(gyro.getAngleX()) || y != int(gyro.getAngleY())){
+    x = gyro.getAngleX();
+    y = gyro.getAngleY();
+    Serial.print(" X:");
+    Serial.println(x ); 
+    Serial.print(" Y:");
+    Serial.println(y );  
+  }
+  
 
+    x = gyro.getAngleX();
+    y = gyro.getAngleY();
+    Serial.print(" X:");
+    Serial.println(x ); 
+    Serial.print(" Y:");
+    Serial.println(y );  
+*/
 
+/*
   if (ultraSensor.distanceCm() <= 5)
   {
     long int start = millis();
@@ -106,16 +134,34 @@ void loop() {
       }
       
     }
-    Serial.println("I left the loop");
+    //Serial.println("I left the loop");
     
   }
-  Serial.println("I left the if statement and :" + String(ultraSensor.distanceCm()));
-
-
+  //Serial.println("I left the if statement and :" + String(ultraSensor.distanceCm()));
+  */
 
   Encoder_1.loop();
   Encoder_2.loop();
   delay(100); /* the minimal measure interval is 100 milliseconds */
+
+  //read the line follower sensors
+  //long int now = millis(); 
+  sensorState = lineFinder.readSensors();
+
+ // Serial.println(sensorState);
+
+  // only one of the sensors on black line
+  if ((sensorState == S1_IN_S2_OUT )|| (sensorState == S1_OUT_S2_IN)){
+    isOnEdge = true;
+  }
+
+  //stay inside confined area
+  if((sensorState == S1_IN_S2_IN) || (isOnEdge == true)){
+    turnRandomLeftAndBacking();
+    isOnEdge = false;
+  }else{
+    moveForward();
+  }
 }
 
 void moveForward(){
@@ -144,4 +190,6 @@ void turnRandomLeftAndBacking(){ //45 degrees turn left backward
 
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-randomNumber);
+
 }
+
