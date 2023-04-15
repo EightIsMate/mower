@@ -28,7 +28,9 @@ MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
 bool anySensorOnLine = false;
-bool foundLine = false;
+
+// to prevent mower from backing over two line in one movement
+bool foundLine = false; 
 int sensorState = 0;
 
 void avoidObject();
@@ -152,31 +154,33 @@ void loop()
     */
 
   // read the line follower sensors
-  // long int now = millis();
   sensorState = lineFinder.readSensors();
 
   Serial.println(sensorState);
 
-  // if any single sensor is on black line
+  // check if any of the sensors is on black line
   if ((sensorState == S1_IN_S2_OUT) || (sensorState == S1_OUT_S2_IN))
   {
     anySensorOnLine = true;
   }
-
 
   // stay inside confined area
   if ((sensorState == S1_IN_S2_IN) || (anySensorOnLine == true))
   {
     if (foundLine == false)
     {
-      moveBackwards();
+      //moveBackwards();
+      //move backwards for 2 seconds
+      move(REVERSE, 100);
+      moveDuration(2.0);
       anySensorOnLine = false;
       foundLine = true;
     }
   }
   else
   {
-    moveForward();
+    //moveForward();
+    move(FORWARD, 100);
     foundLine = false;
   }
 }//--------end of loop--------------
@@ -190,7 +194,7 @@ void moveForward()
 void moveBackwards()
 {
    long int start = millis();
-   long int end = start + 2000; //4 seconds later
+   long int end = start + 2000; //2 seconds later
 
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-100);
@@ -223,35 +227,46 @@ void move(int direction, int speed)
 
   if(direction == FORWARD)
   {  
-    //make the mower move forwards
+    leftSpeed = -speed;
+    rightSpeed = speed;
   }
   else if(direction == REVERSE)
   {
-    //make mower move backwards
+    leftSpeed = speed;
+    rightSpeed = -speed;
   }
   else if(direction == LEFT)
   {
-    //make mower move to the left
+    leftSpeed = -speed;
+    rightSpeed = -speed;
   }
   else if(direction == RIGHT)
   {
-    //make mower move to the right
+    leftSpeed = speed;
+    rightSpeed = speed;
   }
   else if(direction == STOP)
   {
-    //make mower stop
+    leftSpeed = 0;
+    rightSpeed = 0;
   }
+
+  Encoder_1.setMotorPwm(leftSpeed);
+  Encoder_2.setMotorPwm(rightSpeed);
 }
 
 // A function to controll the duration of the movements
 void moveDuration(float seconds)
 {
+  //avoid negative values
   if(seconds < 0.0)
   {
     seconds = 0.0;
   }
 
   unsigned long endTime = millis() + seconds * 1000;
+
+  // run until the current time reaches endTime
   while(millis() < endTime)
   {
     Encoder_1.loop();
