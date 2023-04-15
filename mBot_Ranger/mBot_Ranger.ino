@@ -171,8 +171,12 @@ void loop()
     {
       //moveBackwards();
       //move backwards for 2 seconds
+      int randomNumber = random(100, 200);
       move(REVERSE, 100);
       moveDuration(2.0);
+
+      //Turn left in a random speed
+      move(LEFT, randomNumber);
       anySensorOnLine = false;
       foundLine = true;
     }
