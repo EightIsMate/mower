@@ -151,10 +151,6 @@ void loop()
     //Serial.println("I left the if statement and :" + String(ultraSensor.distanceCm()));
     */
 
-  Encoder_1.loop();
-  Encoder_2.loop();
-  delay(100); /* the minimal measure interval is 100 milliseconds */
-
   // read the line follower sensors
   // long int now = millis();
   sensorState = lineFinder.readSensors();
@@ -218,4 +214,51 @@ void turnRandomLeftAndBacking()
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-randomNumber);
 }
+
+//A function to control the movement direction and speed of the mower
+void move(int direction, int speed)
+{
+  int leftSpeed = 0;
+  int rightSpeed = 0;
+
+  if(direction == FORWARD)
+  {  
+    //make the mower move forwards
+  }
+  else if(direction == REVERSE)
+  {
+    //make mower move backwards
+  }
+  else if(direction == LEFT)
+  {
+    //make mower move to the left
+  }
+  else if(direction == RIGHT)
+  {
+    //make mower move to the right
+  }
+  else if(direction == STOP)
+  {
+    //make mower stop
+  }
+}
+
+// A function to controll the duration of the movements
+void moveDuration(float seconds)
+{
+  if(seconds < 0.0)
+  {
+    seconds = 0.0;
+  }
+
+  unsigned long endTime = millis() + seconds * 1000;
+  while(millis() < endTime)
+  {
+    Encoder_1.loop();
+    Encoder_2.loop();
+    //delay(100);
+  }
+}
+
+
 
