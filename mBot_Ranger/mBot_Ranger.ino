@@ -2,8 +2,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+//Defines
 #define AURIGARINGLEDNUM 12
 #define RINGALLLEDS 0
+
+#define FORWARD 1
+#define REVERSE 2
+#define LEFT 3
+#define RIGHT 4
+#define STOP 5
 
 #ifdef MeAuriga_H
 
@@ -176,7 +183,7 @@ void loop()
     moveForward();
     foundLine = false;
   }
-}
+}//--------end of loop--------------
 
 void moveForward()
 {
@@ -188,7 +195,7 @@ void moveBackwards()
 {
    long int start = millis();
    long int end = start + 2000; //4 seconds later
-   
+
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-100);
 }
@@ -211,3 +218,4 @@ void turnRandomLeftAndBacking()
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-randomNumber);
 }
+
