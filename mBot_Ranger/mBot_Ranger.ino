@@ -37,6 +37,9 @@ void avoidObject();
 void moveForward();
 void moveBackwards();
 void turnRandomLeftAndBacking();
+void move(int direction, int speed);
+void moveDuration(float seconds);
+
 
 void setup()
 {
@@ -156,7 +159,7 @@ void loop()
   // read the line follower sensors
   sensorState = lineFinder.readSensors();
 
-  Serial.println(sensorState);
+  //Serial.println(sensorState);
 
   // check if any of the sensors is on black line
   if ((sensorState == S1_IN_S2_OUT) || (sensorState == S1_OUT_S2_IN))
@@ -169,14 +172,17 @@ void loop()
   {
     if (foundLine == false)
     {
-      //moveBackwards();
-      //move backwards for 2 seconds
-      int randomNumber = random(100, 200);
+      //move backwards for 0,5 seconds
       move(REVERSE, 100);
-      moveDuration(2.0);
+      moveDuration(1.0);
+      
+      //Turn random direction in a random speedgit
+      int randomNumber = random(50, 100);
 
-      //Turn left in a random speed
-      move(LEFT, randomNumber);
+      //Max random value exclusive ,hence the +1
+      int randomDirection = random(LEFT, RIGHT +1);
+      move(randomDirection, randomNumber);
+      moveDuration(1.0);
       anySensorOnLine = false;
       foundLine = true;
     }
@@ -185,6 +191,8 @@ void loop()
   {
     //moveForward();
     move(FORWARD, 100);
+    Encoder_1.loop();
+    Encoder_2.loop();
     foundLine = false;
   }
 }//--------end of loop--------------
@@ -258,6 +266,8 @@ void move(int direction, int speed)
   Encoder_1.setMotorPwm(leftSpeed);
   Encoder_2.setMotorPwm(rightSpeed);
 }
+
+
 
 // A function to controll the duration of the movements
 void moveDuration(float seconds)
