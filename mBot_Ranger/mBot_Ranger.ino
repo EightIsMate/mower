@@ -77,7 +77,7 @@ void loop()
     raspCom = Serial.read();
     switch (raspCom)
     {
-    case '0':
+    case '0': 
       // all LEDs off
       led_ring.setColor(RINGALLLEDS, 0, 0, 0);
       led_ring.show();
@@ -96,7 +96,24 @@ void loop()
     }
   }
 
-  // read distance in cm
+/*
+  //Move commands from Raspberry Pi
+  if(Serial.available() > 0)
+  {
+    if()
+    if(raspCom == forward)
+    {
+      //move forward
+    }
+    else if(raspCom == reverse)
+    {
+      //move backwards
+    }
+  }
+
+  */
+   
+  // read distance  in cm
   /*
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
@@ -122,7 +139,6 @@ void loop()
     Serial.println(y );
   }
 
-
     x = gyro.getAngleX();
     y = gyro.getAngleY();
     Serial.print(" X:");
@@ -130,31 +146,6 @@ void loop()
     Serial.print(" Y:");
     Serial.println(y );
 */
-
-
-
-  /*
-    if (ultraSensor.distanceCm() <= 5)
-    {
-      long int start = millis();
-      long int end = start + 4000; //4 seconds later
-      long int doneBacking = start + 2000;
-
-      while(end >= millis()){
-        if(doneBacking >= millis()){
-          moveBackwards();
-        }
-        else
-        {
-          turnRandomLeftAndBacking();
-        }
-
-      }
-      //Serial.println("I left the loop");
-
-    }
-    //Serial.println("I left the if statement and :" + String(ultraSensor.distanceCm()));
-    */
 
   // read the line follower sensors
   sensorState = lineFinder.readSensors();
@@ -176,7 +167,7 @@ void loop()
       move(REVERSE, 100);
       moveDuration(1.5);
       
-      //Turn random direction in a random speedgit
+      //Turn random direction in a random speed
       int randomNumber = random(75, 101);
 
       //Max random value exclusive ,hence the +1
@@ -210,17 +201,6 @@ void moveBackwards()
 
   Encoder_1.setMotorPwm(100);
   Encoder_2.setMotorPwm(-100);
-}
-
-void avoidObject()
-{
-
-  while (ultraSensor.distanceCm() <= 15)
-  {
-    moveBackwards();
-  }
-
-  turnRandomLeftAndBacking();
 }
 
 void turnRandomLeftAndBacking()
@@ -268,7 +248,6 @@ void move(int direction, int speed)
 }
 
 
-
 // A function to controll the duration of the movements
 void moveDuration(float seconds)
 {
@@ -288,6 +267,3 @@ void moveDuration(float seconds)
     //delay(100);
   }
 }
-
-
-
