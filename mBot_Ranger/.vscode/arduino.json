@@ -1,0 +1,6 @@
+{
+    "configuration": "cpu=atmega2560",
+    "board": "arduino:avr:mega",
+    "port": "/dev/tty.usbserial-1420",
+    "programmer": "avrispmkii"
+}
