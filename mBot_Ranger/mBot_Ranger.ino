@@ -33,13 +33,11 @@ bool anySensorOnLine = false;
 bool foundLine = false; 
 int sensorState = 0;
 
-void avoidObject();
 void moveForward();
 void moveBackwards();
 void turnRandomLeftAndBacking();
 void move(int direction, int speed);
 void moveDuration(float seconds);
-
 
 void setup()
 {
@@ -119,73 +117,62 @@ void loop()
   Serial.print(ultraSensor.distanceCm() );
   Serial.println(" cm");*/
 
-  // read and print Z coordinate from gyro
-  gyro.update();
-  /*
-  Serial.read();
-  Serial.print(" Z:");
-  Serial.println(gyro.getAngleZ() );*/
 
-  int x = 0;
-  int y = 0;
-  /*
-
-  if(x != int(gyro.getAngleX()) || y != int(gyro.getAngleY())){
-    x = gyro.getAngleX();
-    y = gyro.getAngleY();
-    Serial.print(" X:");
-    Serial.println(x );
-    Serial.print(" Y:");
-    Serial.println(y );
-  }
-
-    x = gyro.getAngleX();
-    y = gyro.getAngleY();
-    Serial.print(" X:");
-    Serial.println(x );
-    Serial.print(" Y:");
-    Serial.println(y );
-*/
+  
 
   // read the line follower sensors
-  sensorState = lineFinder.readSensors();
+  // sensorState = lineFinder.readSensors();
 
-  //Serial.println(sensorState);
+  // //Serial.println(sensorState);
 
-  // check if any of the sensors is on black line
-  if ((sensorState == S1_IN_S2_OUT) || (sensorState == S1_OUT_S2_IN))
-  {
-    anySensorOnLine = true;
-  }
+  // // check if any of the sensors is on black line
+  // if ((sensorState == S1_IN_S2_OUT) || (sensorState == S1_OUT_S2_IN))
+  // {
+  //   anySensorOnLine = true;
+  // }
 
-  // stay inside confined area
-  if ((sensorState == S1_IN_S2_IN) || (anySensorOnLine == true))
-  {
-    if (foundLine == false)
-    {
-      //move backwards for 1,5 seconds
-      move(REVERSE, 100);
-      moveDuration(1.5);
+  // // stay inside confined area
+  // if ((sensorState == S1_IN_S2_IN) || (anySensorOnLine == true))
+  // {
+  //   if (foundLine == false)
+  //   {
+  //     //move backwards for 1,5 seconds
+  //     move(REVERSE, 100);
+  //     moveDuration(1.5);
       
-      //Turn random direction in a random speed
-      int randomNumber = random(75, 101);
+  //     //Turn random direction in a random speed
+  //     int randomNumber = random(75, 101);
 
-      //Max random value exclusive ,hence the +1
-      int randomDirection = random(LEFT, RIGHT +1);
-      move(randomDirection, randomNumber);
-      moveDuration(1.0);
-      anySensorOnLine = false;
-      foundLine = true;
-    }
-  }
-  else
-  {
-    //moveForward();
-    move(FORWARD, 100);
-    Encoder_1.loop();
-    Encoder_2.loop();
-    foundLine = false;
-  }
+  //     //Max random value exclusive ,hence the +1
+  //     int randomDirection = random(LEFT, RIGHT +1);
+  //     move(randomDirection, randomNumber);
+  //     moveDuration(1.0);
+  //     anySensorOnLine = false;
+  //     foundLine = true;
+  //   }
+  // }
+  // else
+  // {
+  //   //moveForward();
+  //   move(FORWARD, 100);
+  //   Encoder_1.loop();
+  //   Encoder_2.loop();
+  //   foundLine = false;
+  // }
+  Serial.println("Stopping");
+  move(STOP, 0);
+  moveDuration(5.0);
+  Serial.println("Going forward");
+  move(FORWARD,125);
+  moveDuration(3.0);
+  Serial.println("Stopping");
+  move(STOP,0);
+  moveDuration(5.0);
+  Serial.println("Reversing");
+  move(REVERSE, 125);
+  moveDuration(3.0);
+
+
 }//--------end of loop--------------
 
 void moveForward()
@@ -262,8 +249,20 @@ void moveDuration(float seconds)
   // run until the current time reaches endTime
   while(millis() < endTime)
   {
+    ReadAndPrintGyro();
     Encoder_1.loop();
     Encoder_2.loop();
     //delay(100);
   }
+}
+
+void ReadAndPrintGyro()
+{  
+  gyro.update();  
+  Serial.print(" X:");
+  Serial.println( gyro.getAngleX());
+  Serial.print(" Y:");
+  Serial.println(gyro.getAngleY());
+  Serial.print(" Z:");
+  Serial.println(gyro.getAngleZ());
 }
