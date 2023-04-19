@@ -12,8 +12,8 @@
 #define RIGHT 4
 #define STOP 5
 
-#define REVERSEDURATION 1.5
-#define TURNINGDURATION 1.0
+#define REVERSEDURATION 1.5 * 1000 //1,5
+#define TURNINGDURATION 1.0 * 1000  //1sec
 #ifdef MeAuriga_H
 
 // on-board LED ring, at PORT0 (onboard), with 12 LEDs
@@ -28,8 +28,6 @@ MeGyro gyro(0, 0x69);
 MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
-
-bool anySensorOnLine = false;
 
 // to prevent mower from backing over two line in one movement
 bool foundLine = false; 
@@ -84,6 +82,7 @@ void loop()
   if (Serial.available() > 0)
   {
     raspCom = Serial.read();
+    Serial.println(String(raspCom));
     switch (raspCom)
     {
     case '0': 
@@ -143,7 +142,7 @@ void loop()
   case S1_OUT_S2_OUT:
     foundLine = false;
     haveChosenRandomValues = false;
-    move(FORWARD, 100);
+    move(FORWARD, 125);
     if (sensorState != lineFinder.readSensors())
     {
       sensorState = lineFinder.readSensors();
@@ -268,14 +267,14 @@ void avoidCrossingLine(){
       if (foundLine == false)
     {
       foundLine = true;
-      reverseDuration = millis() + REVERSEDURATION * 1000; //1,5 sec
-      turningDuration = millis() + TURNINGDURATION * 1000 + REVERSEDURATION * 1000; // 1 sec
+      reverseDuration = millis() + REVERSEDURATION; 
+      turningDuration = millis() + TURNINGDURATION + REVERSEDURATION;
       doneAvoiding = false;
     }
 
     if(millis() < reverseDuration)
     {
-      move(REVERSE, 100);
+      move(REVERSE, 125);
     }
     else if ((millis() >= reverseDuration) && (millis() < turningDuration))
     {
@@ -288,7 +287,7 @@ void avoidCrossingLine(){
         randomTurningDirection = random(LEFT, RIGHT +1);
       }
       
-      move(randomTurningDirection, randomTurningNumber);
+      move(LEFT, randomTurningNumber);
     }
     else{
       doneAvoiding = true;
