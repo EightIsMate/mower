@@ -29,7 +29,6 @@ MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
-// to prevent mower from backing over two line in one movement
 bool foundLine = false; 
 bool doneAvoiding = false;
 bool haveChosenRandomValues = false;
@@ -38,6 +37,7 @@ long int reverseDuration = 0;
 long int turningDuration = 0;
 int randomTurningNumber = 0;
 int randomTurningDirection = 0;
+char mowerMode[3] = " "; //array to save bits from pi to mower
 
 void moveForward();
 void moveBackwards();
@@ -45,6 +45,8 @@ void turnRandomLeftAndBacking();
 void move(int direction, int speed);
 void moveDuration(float seconds);
 void avoidCrossingLine();
+void autoMow();
+void manualMow();
 
 void setup()
 {
@@ -69,20 +71,55 @@ void setup()
   TCCR2A = _BV(WGM21) | _BV(WGM20);
   TCCR2B = _BV(CS21);
 
+  //read line follower sensor
   sensorState = lineFinder.readSensors();
+  mowerMode[0] = 'A';
+  mowerMode[1] = '0';
+  mowerMode[2] = '0';
 }
 
 // put your main code here, to run repeatedly:
 void loop()
 {
 
-  // communication with raspberry pi
-  char raspCom;
-
-  if (Serial.available() > 0)
+  while(Serial.available() > 0)
   {
-    raspCom = Serial.read();
-    Serial.println(String(raspCom));
+    //fill array with bits from pi
+    for(int i=0; i <= 2; i ++)
+    {
+      mowerMode[i] = Serial.read();
+      //Serial.print("mowerMode: ");
+    }
+  }
+
+  Serial.println(String(mowerMode[0]));
+
+  if(mowerMode[0] == 'M') //Controlling the mower manually 
+  {
+    manualMow();
+    led_ring.setColor(RINGALLLEDS, 0, 0, 0);
+    led_ring.show();
+  }
+  else if(mowerMode[0] == 'A') //automode chosen
+  {
+    autoMow();
+    led_ring.setColor(RINGALLLEDS, 0, 0, 0);
+    led_ring.show();
+  }
+  else //wrong input
+  {
+    move(STOP, 0); 
+    led_ring.setColor(RINGALLLEDS, 50, 0, 0);
+    led_ring.show();
+    
+  }
+
+  //autoMow();
+    
+    //Serial.println(String(raspCom));
+    /*
+
+    //LEDRING
     switch (raspCom)
     {
     case '0': 
@@ -102,71 +139,15 @@ void loop()
       Serial.write("E", 1);
       break;
     }
-  }
 
-/*
-  //Move commands from Raspberry Pi
-  if(Serial.available() > 0)
-  {
-    if()
-    if(raspCom == forward)
-    {
-      //move forward
-    }
-    else if(raspCom == reverse)
-    {
-      //move backwards
-    }
-  }
-
-  */
-   
+    */
+  
   // read distance  in cm
   /*
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
   Serial.println(" cm");*/
   
-  switch (sensorState)
-  {
-  case S1_IN_S2_OUT:
-    avoidCrossingLine();
-    break;
-  case S1_OUT_S2_IN:
-    avoidCrossingLine();
-    break;
-  case S1_IN_S2_IN:
-    avoidCrossingLine();
-    break;
-  
-  case S1_OUT_S2_OUT:
-    foundLine = false;
-    haveChosenRandomValues = false;
-    move(FORWARD, 125);
-    if (sensorState != lineFinder.readSensors())
-    {
-      sensorState = lineFinder.readSensors();
-    }
-    break;
-  default:
-    break;
-  }
-
-  Encoder_1.loop();
-  Encoder_2.loop();
-
-  // Serial.println("Stopping");
-  // move(STOP, 0);
-  // moveDuration(5.0);
-  // Serial.println("Going forward");
-  // move(FORWARD,125);
-  // moveDuration(3.0);
-  // Serial.println("Stopping");
-  // move(STOP,0);
-  // moveDuration(5.0);
-  // Serial.println("Reversing");
-  // move(REVERSE, 125);
-  // moveDuration(3.0);
 
 
 }//--------end of loop--------------
@@ -297,4 +278,41 @@ void avoidCrossingLine(){
     {
       sensorState = S1_OUT_S2_OUT;
     }
+}
+
+void autoMow()
+{
+    switch (sensorState)
+  {
+  case S1_IN_S2_OUT:
+    avoidCrossingLine();
+    break;
+  case S1_OUT_S2_IN:
+    avoidCrossingLine();
+    break;
+  case S1_IN_S2_IN:
+    avoidCrossingLine();
+    break;
+  
+  case S1_OUT_S2_OUT:
+    foundLine = false;
+    haveChosenRandomValues = false;
+    move(FORWARD, 125);
+    if (sensorState != lineFinder.readSensors())
+    {
+      sensorState = lineFinder.readSensors();
+    }
+    break;
+  default:
+    break;
+  }
+
+  Encoder_1.loop();
+  Encoder_2.loop();
+}
+
+void manualMow()
+{
+    move(STOP,0);
+    Serial.println("im mowing manually now hihi");
 }
