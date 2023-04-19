@@ -12,6 +12,8 @@
 #define RIGHT 4
 #define STOP 5
 
+#define REVERSEDURATION 1.5 * 1000 //1,5
+#define TURNINGDURATION 1.0 * 1000  //1sec
 #ifdef MeAuriga_H
 
 // on-board LED ring, at PORT0 (onboard), with 12 LEDs
@@ -27,17 +29,22 @@ MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
-bool anySensorOnLine = false;
-
 // to prevent mower from backing over two line in one movement
 bool foundLine = false; 
+bool doneAvoiding = false;
+bool haveChosenRandomValues = false;
 int sensorState = 0;
+long int reverseDuration = 0;
+long int turningDuration = 0;
+int randomTurningNumber = 0;
+int randomTurningDirection = 0;
 
 void moveForward();
 void moveBackwards();
 void turnRandomLeftAndBacking();
 void move(int direction, int speed);
 void moveDuration(float seconds);
+void avoidCrossingLine();
 
 void setup()
 {
@@ -61,6 +68,8 @@ void setup()
 
   TCCR2A = _BV(WGM21) | _BV(WGM20);
   TCCR2B = _BV(CS21);
+
+  sensorState = lineFinder.readSensors();
 }
 
 // put your main code here, to run repeatedly:
@@ -73,6 +82,7 @@ void loop()
   if (Serial.available() > 0)
   {
     raspCom = Serial.read();
+    Serial.println(String(raspCom));
     switch (raspCom)
     {
     case '0': 
@@ -116,61 +126,47 @@ void loop()
   Serial.print("Distance : ");
   Serial.print(ultraSensor.distanceCm() );
   Serial.println(" cm");*/
-
-
   
+  switch (sensorState)
+  {
+  case S1_IN_S2_OUT:
+    avoidCrossingLine();
+    break;
+  case S1_OUT_S2_IN:
+    avoidCrossingLine();
+    break;
+  case S1_IN_S2_IN:
+    avoidCrossingLine();
+    break;
+  
+  case S1_OUT_S2_OUT:
+    foundLine = false;
+    haveChosenRandomValues = false;
+    move(FORWARD, 125);
+    if (sensorState != lineFinder.readSensors())
+    {
+      sensorState = lineFinder.readSensors();
+    }
+    break;
+  default:
+    break;
+  }
 
-  // read the line follower sensors
-  // sensorState = lineFinder.readSensors();
+  Encoder_1.loop();
+  Encoder_2.loop();
 
-  // //Serial.println(sensorState);
-
-  // // check if any of the sensors is on black line
-  // if ((sensorState == S1_IN_S2_OUT) || (sensorState == S1_OUT_S2_IN))
-  // {
-  //   anySensorOnLine = true;
-  // }
-
-  // // stay inside confined area
-  // if ((sensorState == S1_IN_S2_IN) || (anySensorOnLine == true))
-  // {
-  //   if (foundLine == false)
-  //   {
-  //     //move backwards for 1,5 seconds
-  //     move(REVERSE, 100);
-  //     moveDuration(1.5);
-      
-  //     //Turn random direction in a random speed
-  //     int randomNumber = random(75, 101);
-
-  //     //Max random value exclusive ,hence the +1
-  //     int randomDirection = random(LEFT, RIGHT +1);
-  //     move(randomDirection, randomNumber);
-  //     moveDuration(1.0);
-  //     anySensorOnLine = false;
-  //     foundLine = true;
-  //   }
-  // }
-  // else
-  // {
-  //   //moveForward();
-  //   move(FORWARD, 100);
-  //   Encoder_1.loop();
-  //   Encoder_2.loop();
-  //   foundLine = false;
-  // }
-  Serial.println("Stopping");
-  move(STOP, 0);
-  moveDuration(5.0);
-  Serial.println("Going forward");
-  move(FORWARD,125);
-  moveDuration(3.0);
-  Serial.println("Stopping");
-  move(STOP,0);
-  moveDuration(5.0);
-  Serial.println("Reversing");
-  move(REVERSE, 125);
-  moveDuration(3.0);
+  // Serial.println("Stopping");
+  // move(STOP, 0);
+  // moveDuration(5.0);
+  // Serial.println("Going forward");
+  // move(FORWARD,125);
+  // moveDuration(3.0);
+  // Serial.println("Stopping");
+  // move(STOP,0);
+  // moveDuration(5.0);
+  // Serial.println("Reversing");
+  // move(REVERSE, 125);
+  // moveDuration(3.0);
 
 
 }//--------end of loop--------------
@@ -265,4 +261,40 @@ void ReadAndPrintGyro()
   Serial.println(gyro.getAngleY());
   Serial.print(" Z:");
   Serial.println(gyro.getAngleZ());
+}
+
+void avoidCrossingLine(){
+      if (foundLine == false)
+    {
+      foundLine = true;
+      reverseDuration = millis() + REVERSEDURATION; 
+      turningDuration = millis() + TURNINGDURATION + REVERSEDURATION;
+      doneAvoiding = false;
+    }
+
+    if(millis() < reverseDuration)
+    {
+      move(REVERSE, 125);
+    }
+    else if ((millis() >= reverseDuration) && (millis() < turningDuration))
+    {
+      if (haveChosenRandomValues == false)
+      {
+        haveChosenRandomValues = true;
+        //Turn random direction in a random speed
+        randomTurningNumber = random(75, 101);
+        //Max random value exclusive ,hence the +1
+        randomTurningDirection = random(LEFT, RIGHT +1);
+      }
+      
+      move(LEFT, randomTurningNumber);
+    }
+    else{
+      doneAvoiding = true;
+    }
+
+    if (doneAvoiding == true)
+    {
+      sensorState = S1_OUT_S2_OUT;
+    }
 }
