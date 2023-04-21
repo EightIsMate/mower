@@ -10,10 +10,11 @@
 #define REVERSE 2
 #define LEFT 3
 #define RIGHT 4
-#define STOP 5
+#define STOP 5 
 
 #define REVERSEDURATION 1.5 * 1000 //1,5
 #define TURNINGDURATION 1.0 * 1000  //1sec
+#define MANUALSPEED 125
 #ifdef MeAuriga_H
 
 // on-board LED ring, at PORT0 (onboard), with 12 LEDs
@@ -37,7 +38,9 @@ long int reverseDuration = 0;
 long int turningDuration = 0;
 int randomTurningNumber = 0;
 int randomTurningDirection = 0;
-char mowerMode[3] = " "; //array to save bits from pi to mower
+char mowerMode[5] = " "; //array to save bits from pi to mower
+char manualState = 0;
+int isAuto = 0; 
 
 void moveForward();
 void moveBackwards();
@@ -46,7 +49,7 @@ void move(int direction, int speed);
 void moveDuration(float seconds);
 void avoidCrossingLine();
 void autoMow();
-void manualMow();
+void manualMow(char direction, char turnDirection);
 
 void setup()
 {
@@ -78,6 +81,7 @@ void setup()
   mowerMode[2] = '0';
 }
 
+
 // put your main code here, to run repeatedly:
 void loop()
 {
@@ -85,36 +89,60 @@ void loop()
   while(Serial.available() > 0)
   {
     //fill array with bits from pi
-    for(int i=0; i <= 2; i ++)
+    for(int i=0; i <= 4; i ++)
     {
       mowerMode[i] = Serial.read();
       //Serial.print("mowerMode: ");
     }
   }
-
+  
+  Serial.print("mowerMode[0]: ");
   Serial.println(String(mowerMode[0]));
+  Serial.print("mowerMode[1]: ");
+  Serial.println(String(mowerMode[1]));
+  Serial.print("mowerMode[2]: ");
+  Serial.println(String(mowerMode[2]));
 
-  if(mowerMode[0] == 'M') //Controlling the mower manually 
+  String inputMode = String(mowerMode[0]);
+  inputMode.toUpperCase();
+
+  Serial.print("inputMode.toUpperCase(): ");
+  Serial.println(inputMode);
+
+  if(inputMode == "M") //Controlling the mower manually 
   {
-    manualMow();
-    led_ring.setColor(RINGALLLEDS, 0, 0, 0);
+    manualMow(mowerMode[1], mowerMode[2]);
+    led_ring.setColor(RINGALLLEDS,0, 100, 100);
     led_ring.show();
   }
-  else if(mowerMode[0] == 'A') //automode chosen
+  else if(inputMode == "A") //automode chosen
   {
     autoMow();
-    led_ring.setColor(RINGALLLEDS, 0, 0, 0);
+    led_ring.setColor(RINGALLLEDS, 0, 0, 50);
     led_ring.show();
   }
   else //wrong input
   {
     move(STOP, 0); 
     led_ring.setColor(RINGALLLEDS, 50, 0, 0);
-    led_ring.show();
-    
+    led_ring.show();  
+  }
+/*
+    while(Serial.available() > 0)
+  {
+    //fill array with bits from pi
+    for(int i=0; i <= 4; i ++)
+    {
+      mowerMode[i] = Serial.read();
+      //Serial.print("mowerMode: ");
+    }
   }
 
-  //autoMow();
+  */
+
+
+ 
+  
     
     //Serial.println(String(raspCom));
     /*
@@ -211,7 +239,6 @@ void move(int direction, int speed)
   Encoder_2.setMotorPwm(rightSpeed);
 }
 
-
 // A function to controll the duration of the movements
 void moveDuration(float seconds)
 {
@@ -282,7 +309,7 @@ void avoidCrossingLine(){
 
 void autoMow()
 {
-    switch (sensorState)
+  switch (sensorState)
   {
   case S1_IN_S2_OUT:
     avoidCrossingLine();
@@ -311,8 +338,92 @@ void autoMow()
   Encoder_2.loop();
 }
 
-void manualMow()
+void manualMow(char direction, char turnDirection)
 {
-    move(STOP,0);
-    Serial.println("im mowing manually now hihi");
+  //Serial.println("im mowing manually now hihi");
+  Serial.print("direction: ");
+  Serial.println(String(direction));
+
+  Serial.print("turnDirection: ");
+  Serial.println(String(turnDirection));
+  //checking input function
+  int intDirection = String(direction).toInt();
+  Serial.print("intDirection: ");
+  Serial.println(String(intDirection));
+  
+  int intTurnDirection = String(turnDirection).toInt();
+  Serial.print("intTurnDirection: ");
+  Serial.println(String(intTurnDirection));
+
+  int manualState = intDirection * 10 + intTurnDirection;
+  Serial.print("manualState: ");
+  Serial.println(String(manualState));
+
+  int leftSpeed = 0;
+  int rightSpeed = 0;
+
+  switch (manualState)
+  {
+  case 10: //forward
+    leftSpeed = -MANUALSPEED;
+    rightSpeed = MANUALSPEED;
+    Serial.println("im moving forward");
+    break;
+
+  case 20: // reversing
+    leftSpeed = MANUALSPEED;
+    rightSpeed = -MANUALSPEED;
+    Serial.println("im moving backward");
+    break;
+
+  case 13: //forward_left
+    leftSpeed = -MANUALSPEED;
+    rightSpeed = MANUALSPEED/3;
+    Serial.println("im moving forward_left");
+    break;
+
+  case 14: //forward_right
+    leftSpeed = -MANUALSPEED/3;
+    rightSpeed = MANUALSPEED;
+    Serial.println("im moving forward_right");
+    break;
+
+  case 23: //reverse_left 
+    leftSpeed = MANUALSPEED;
+    rightSpeed = -MANUALSPEED/3;
+    Serial.println("im moving reverse_left");
+    break;
+
+  case 24: //reverse_right
+    leftSpeed = MANUALSPEED/3;
+    rightSpeed = -MANUALSPEED;
+    Serial.println("im moving reverse_right");
+    break;
+
+  case 03: //moving left
+    leftSpeed = -MANUALSPEED;
+    rightSpeed = -MANUALSPEED;
+    Serial.println("im moving left");
+    break;
+
+  case 04://right
+    leftSpeed = MANUALSPEED;
+    rightSpeed = MANUALSPEED;
+    Serial.println("im moving right");
+    break;
+
+  case 00: //stop
+    leftSpeed = 0;
+    rightSpeed = 0;
+    Serial.println("im stopping");
+    break;
+
+  default:
+    break;
+  }
+  Encoder_1.setMotorPwm(leftSpeed);
+  Encoder_2.setMotorPwm(rightSpeed);
+
+  Encoder_1.loop();
+  Encoder_2.loop();
 }
