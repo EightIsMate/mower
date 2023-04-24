@@ -46,6 +46,7 @@ char mowerMode[5] = " "; // array to save bits from pi to mower
 char manualState = 0;
 int avoidState = 0;
 char doneTakingPicture = ' ';
+int i = 0; // counter for message length received
 
 //function declarations
 void move(int direction, int speed);
@@ -90,20 +91,31 @@ void loop()
 
     while (Serial.available() > 0)
     {
-        if (Serial.read() == 'K') //Pi is done taking a picture
+        
+        char data = Serial.read();
+
+        if (data != '\n')
         {
-           doneTakingPicture = Serial.read();
-        }
-        else
-        {        
-            // fill array with bits from pi
-            for (int i = 0; i <= 4; i++)
+            if (data == 'K') //Pi is done taking a picture
             {
-                mowerMode[i] = Serial.read();
+                doneTakingPicture = data;
+            }
+            else
+            {        
+                // fill array with bits from pi
+                if (i <=4)
+                {
+                    mowerMode[i] = data;
+                    i +=1;
+                } 
             }
         }
-    }
+        else{
+            i = 0;
 
+        }
+    }
+   
     /*
     Serial.print("mowerMode[0]: ");
     Serial.println(String(mowerMode[0]));
@@ -112,9 +124,9 @@ void loop()
     Serial.print("mowerMode[2]: ");
     Serial.println(String(mowerMode[2]));
     */
-
     String inputMode = String(mowerMode[0]);
     inputMode.toUpperCase();
+    // Serial.println(inputMode);
 
     if (inputMode == "M") // Controlling the mower manually
     {
@@ -390,16 +402,16 @@ void objectDetected()
     case ALIGNING:
 
         //if aligning done then go to TAKEPICTURE state
-        if( alignedGyroValue != gyroValue)
-        {
-            //align the robot
-        } else {
-            doneAligning = true;
-        }
+        // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
+        // {
+        //     //align the robot
+        // } else {
+        //     doneAligning = true;
+        // }
 
-        if(doneAligning == true){
-            avoidState = TAKEPICTURE;  
-        }
+        // if(doneAligning == true){
+        //     avoidState = TAKEPICTURE;  
+        // }
         
         break;
         
