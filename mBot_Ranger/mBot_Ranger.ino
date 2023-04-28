@@ -2,8 +2,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-//testing
-
 // Defines
 #define AURIGARINGLEDNUM 12
 #define RINGALLLEDS 0
@@ -104,7 +102,7 @@ void loop()
             else
             {        
                 // fill array with bits from pi
-                if (i <=4)
+                if (i < 3)
                 {
                     mowerMode[i] = data;
                     i +=1;
@@ -116,13 +114,14 @@ void loop()
         }
     }
    
-    
+    /*
     Serial.print("mowerMode[0]: ");
     Serial.println(String(mowerMode[0]));
     Serial.print("mowerMode[1]: ");
     Serial.println(String(mowerMode[1]));
     Serial.print("mowerMode[2]: ");
     Serial.println(String(mowerMode[2]));
+    */
     
 
     String inputMode = String(mowerMode[0]);
@@ -219,17 +218,18 @@ void avoidObstacles()
         avoidObstaclesInit = true;
         reverseDuration = millis() + REVERSEDURATION;
         turningDuration = millis() + TURNINGDURATION + REVERSEDURATION;
-        lineDepartureDelay = millis() + 100; 
+        lineDepartureDelay = millis() + 200; 
+        lineSensor = sensorState;
+        hasntCrossedLineTwice = true;
         doneAvoiding = false;
     }
 
-
-    if (millis() < reverseDuration)
+    if (millis() < reverseDuration && hasntCrossedLineTwice == true)
     {   
         move(REVERSE, 125);
 
     }
-    else if ((millis() >= reverseDuration) && (millis() < turningDuration))
+    else if ((millis() >= reverseDuration) && (millis() < turningDuration) && hasntCrossedLineTwice == true)
     {
         if (haveChosenRandomValue == false)
         {
@@ -239,30 +239,32 @@ void avoidObstacles()
         }
 
         move(LEFT, randomTurningNumber);
+    
     }
     else
     {
         doneAvoiding = true;
     }
 
-    lineSensor = lineFinder.readSensors();
+    if (lineSensor != lineFinder.readSensors())
+    {
+        lineSensor = lineFinder.readSensors();
+    }
+
     // avoid crossing line twice 
     if(hasntCrossedLineTwice == true && millis() > lineDepartureDelay){
 
-        Serial.print("First if statment in avoidObstacles: ");        
-        Serial.println(String(hasntCrossedLineTwice));
-        Serial.print("lineSensor: ");
-        Serial.println(String(lineSensor));
         if (lineSensor != S1_OUT_S2_OUT )
         {
             hasntCrossedLineTwice = false;
-            Serial.print("nested if statment in avoidObstacles: ");        
-            Serial.println(String(lineSensor));
+            lineDepartureDelay = millis() + 300; // give it some time to move to the confined area
+            move(FORWARD, 125);
         }
     }
-    
-    if (doneAvoiding == true || hasntCrossedLineTwice == false)
+
+    if ((doneAvoiding == true && hasntCrossedLineTwice == true)|| (hasntCrossedLineTwice == false && millis() > lineDepartureDelay))
     {
+        move(FORWARD, 125);
         sensorState = S1_OUT_S2_OUT;
     }
 }
@@ -272,17 +274,14 @@ void autoMow()
     switch (sensorState)
     {
     case S1_IN_S2_OUT:
-        hasntCrossedLineTwice = true;
         avoidObstacles();
         break;
 
     case S1_OUT_S2_IN:
-        hasntCrossedLineTwice = true;
         avoidObstacles();
         break;
 
     case S1_IN_S2_IN:
-        hasntCrossedLineTwice = true;
         avoidObstacles();
         break;
 
@@ -295,13 +294,17 @@ void autoMow()
 
         if (sensorState != lineFinder.readSensors())
         {
+            Serial.print("sensorState before: ");
+            Serial.println(sensorState);
+            Serial.println("Out_Out state change");
             sensorState = lineFinder.readSensors(); 
+            Serial.print("sensorState after: ");
+            Serial.println(sensorState);
         }
-       /* else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions)
+       else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
         {
             sensorState = FOUND_OBJECT;
         }
-        */
         break;
 
     case FOUND_OBJECT:
