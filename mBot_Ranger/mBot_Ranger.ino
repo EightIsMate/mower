@@ -49,6 +49,9 @@ int avoidState = 0;
 char doneTakingPicture = ' ';
 int i = 0; // counter for message length received
 int lineSensor = 0;
+// Receiving desired angle from lidar
+int receievedAngle = 0;
+char doneSwtichingAngle = ' ';
 
 //function declarations
 void move(int direction, int speed);
@@ -98,6 +101,11 @@ void loop()
             if (data == 'K') //Pi is done taking a picture
             {
                 doneTakingPicture = data;
+            }
+            else if (data == 'L')
+            {
+                doneSwtichingAngle = data;
+                objectDetected();
             }
             else
             {        
@@ -413,7 +421,7 @@ void objectDetected()
     Serial.print(ultraSensor.distanceCm());
     Serial.println(" cm");
 
-    
+    float CurrentgyroAngleZ = gyro.getAngleZ();
     // line up with the object in detection area to take picture then back and turn
     // if object is detected either via lidar or ultrasonic sensor
     // be infront of the object
@@ -423,14 +431,25 @@ void objectDetected()
     // backing
     // turning
     // continue forward
-    avoidState = AVOIDING; //For debugging since we do not have code in ALIGNING state
+    // avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
+    avoidState = ALIGNING;
     switch (avoidState)
     {
     case ALIGNING:
-
+        if (doneSwtichingAngle == 'L'){ //make sure do not let lidar keep sending this message or the robot will dance
+            Serial.write("R",1);
+        }
+            avoidState = AVOIDING;
         //if aligning done then go to TAKEPICTURE state
         // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
         // {
+                // if (CurrentgyroAngleZ > 43 && CurrentgyroAngleZ < 47){
+                    // center to the desired angle
+                //     move(STOP, 0);
+                // } 
+                // else{
+                //     move(LEFT, 200);
+                // }
         //     //align the robot
         // } else {
         //     doneAligning = true;
@@ -456,6 +475,10 @@ void objectDetected()
         break; 
     
     case AVOIDING:
+        //  if (doneSwtichingAngle == 'L'){
+        //     Serial.write("R",1);
+        //     doneSwtichingAngle = ' ';
+        // }
         avoidObstacles();
         avoidState = 0;
         break;
@@ -464,4 +487,3 @@ void objectDetected()
         break;
     }
 }
-
