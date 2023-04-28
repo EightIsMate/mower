@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-//test
+//testing
 
 // Defines
 #define AURIGARINGLEDNUM 12
