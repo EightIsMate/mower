@@ -31,6 +31,11 @@ MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
+const float WHEEL_DIAMETER = 4.0;    // Diameter of the wheels in cm
+const float WHEEL_CIRCUMFERENCE = PI * WHEEL_DIAMETER;  // Circumference of the wheels
+const int ENCODER_RESOLUTION = 180;  // Encoder resolution (number of ticks per revolution)
+const float DISTANCE_PER_TICK = WHEEL_CIRCUMFERENCE / ENCODER_RESOLUTION;  // Distance traveled per encoder tick
+
 //declared variables
 bool hasntCrossedLineTwice = false;
 bool avoidObstaclesInit = false;
@@ -53,12 +58,18 @@ int lineSensor = 0;
 int receievedAngle = 0;
 char doneSwtichingAngle = ' ';
 
+//Variables for dead reckoning
+float x = 0.0;
+float y = 0.0;
+float heading = 0.0;
+
 //function declarations
 void move(int direction, int speed);
 void avoidObstacles();
 void autoMow();
 void manualMow(char direction, char turnDirection);
 void objectDetected();
+void update_position();
 
 void setup()
 {
@@ -179,6 +190,8 @@ void loop()
     }
 
     */
+    Encoder_1.loop();
+    Encoder_2.loop();
 
 } //--------end of loop--------------
 
@@ -302,17 +315,12 @@ void autoMow()
 
         if (sensorState != lineFinder.readSensors())
         {
-            Serial.print("sensorState before: ");
-            Serial.println(sensorState);
-            Serial.println("Out_Out state change");
             sensorState = lineFinder.readSensors(); 
-            Serial.print("sensorState after: ");
-            Serial.println(sensorState);
         }
-       else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
-        {
-            sensorState = FOUND_OBJECT;
-        }
+        // else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
+        // {
+        //     sensorState = FOUND_OBJECT;
+        // }
         break;
 
     case FOUND_OBJECT:
@@ -322,9 +330,6 @@ void autoMow()
     default:
         break;
     }
-
-    Encoder_1.loop();
-    Encoder_2.loop();
 }
 
 void manualMow(char direction, char turnDirection)
@@ -401,9 +406,6 @@ void manualMow(char direction, char turnDirection)
     }
     Encoder_1.setMotorPwm(leftSpeed);
     Encoder_2.setMotorPwm(rightSpeed);
-
-    Encoder_1.loop();
-    Encoder_2.loop();
 }
 
 
@@ -486,4 +488,22 @@ void objectDetected()
     default:
         break;
     }
+}
+
+void update_position(){
+
+    int ticks_1 = Encoder_1.getPulsePos();
+    int ticks_2 = Encoder_2.getPulsePos();
+
+    float distance_1 = ticks_1 * DISTANCE_PER_TICK;
+    float distance_2 = ticks_2 * DISTANCE_PER_TICK;
+
+    float avgDistance = (distance_1 + distance_2) / 2.0;
+
+    x = avgDistance * cos(heading * PI / 180.0);
+    y = avgDistance * sin(heading * PI / 180.0);
+    heading += (distance_2 - distance_1) / WHEEL_DIAMETER;
+
+    Encoder_1.pulsePosReset();
+    Encoder_2.pulsePosReset();
 }
