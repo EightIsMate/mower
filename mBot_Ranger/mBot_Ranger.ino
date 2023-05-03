@@ -127,7 +127,7 @@ void loop()
                     i +=1;
                 } 
             }
-            else if(objectIsClose == 'L') //get angles from the lidarsensor
+            else if(objectIsClose == 'L') //get angles from the lidar sensor
             {
                 if(i < 3)
                 {
