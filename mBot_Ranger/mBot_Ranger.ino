@@ -47,6 +47,7 @@ char mowerMode[3] = " "; // array to save bits from pi to mower
 char manualState = 0;
 int avoidState = 0;
 char doneTakingPicture = ' ';
+char closeObject = ' '; //close object detected by lidar
 int i = 0; // counter for message length received
 int lineSensor = 0;
 
@@ -99,6 +100,10 @@ void loop()
             {
                 doneTakingPicture = data;
             }
+            else if(data == 'L') //Pi notifies mower that object is closer than 30 cm
+            {
+                closeObject = data;
+            }
             else
             {        
                 // fill array with bits from pi
@@ -138,7 +143,7 @@ void loop()
     {
         autoMow();
         led_ring.setColor(RINGALLLEDS, 0, 0, 50);
-        led_ring.show();
+        led_ring.show(); 
     }
     else // wrong input
     {
@@ -301,7 +306,7 @@ void autoMow()
             Serial.print("sensorState after: ");
             Serial.println(sensorState);
         }
-       else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
+       else if(ultraSensor.distanceCm() <= 30 || closeObject == 'L') 
         {
             sensorState = FOUND_OBJECT;
         }
@@ -408,43 +413,54 @@ void objectDetected()
     gyro.update(); 
     Serial.print(" Z:");
     Serial.println(gyro.getAngleZ());
-    
+
+    //get distance from low object detected by ultrasonic sensor
     Serial.print("Distance : ");
     Serial.print(ultraSensor.distanceCm());
     Serial.println(" cm");
 
+    //get distance and angle from lidar
     
-    // line up with the object in detection area to take picture then back and turn
+    // line up with the object in detection area to take picture, then back and turn
     // if object is detected either via lidar or ultrasonic sensor
-    // be infront of the object
+    // turn robot so the object is aligned with its front its front 
     // take picture
     // done taking photo?
     // if yes
     // backing
     // turning
     // continue forward
+
     avoidState = AVOIDING; //For debugging since we do not have code in ALIGNING state
+    // avoidState = ALIGNING;
     switch (avoidState)
     {
     case ALIGNING:
+
+        move(STOP,0);
 
         //if aligning done then go to TAKEPICTURE state
         // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
         // {
         //     //align the robot
-        // } else {
+        // } else{
         //     doneAligning = true;
         // }
 
-        // if(doneAligning == true){
-        //     avoidState = TAKEPICTURE;  
-        // }
-        
+        if(doneAligning == true)
+        {  
+            if(closeObject = 'L')
+            {
+                closeObject = ' ';
+            }
+            avoidState = TAKEPICTURE;  
+        }
+
         break;
         
     case TAKEPICTURE:
         //stop for a few sec and then take a picture of the obstacle. tell raspberrypi to take a picture
-        move(STOP,0);
+        //move(STOP,0);
         Serial.write("P",1); //tell pi to take picture
 
         // set next state if pi is done taking picture
