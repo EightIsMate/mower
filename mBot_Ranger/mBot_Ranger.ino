@@ -122,15 +122,12 @@ void loop()
             {
                 if (i < 3)
                 { 
-                    Serial.println("im inside if statement for manual mow");
                     if (i != 0)
                         mowerMode[i] = data;
                     i +=1;
                 } 
             }
-
-            //get angles from the lidarsensor
-            if(objectIsClose == 'L')
+            else if(objectIsClose == 'L') //get angles from the lidarsensor
             {
                 if(i < 3)
                 {
