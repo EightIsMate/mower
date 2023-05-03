@@ -51,7 +51,8 @@ int i = 0; // counter for message length received
 int lineSensor = 0;
 // Receiving desired angle from lidar
 int receievedAngle = 0;
-char doneSwitchingAngle = ' ';
+char objectIsClose = ' ';
+char lidarAngle[3] = " ";
 
 //function declarations
 void move(int direction, int speed);
@@ -98,42 +99,74 @@ void loop()
 
         if (data != '\n')
         {
-            if (data == 'K') //Pi is done taking a picture
+            if (isAlpha(data)) 
             {
-                doneTakingPicture = data;
-            }
-            else if (data == 'L')
-            {
-                doneSwitchingAngle = data;
-            }
-            else
-            {        
-                // fill array with bits from pi
-                if (i < 3)
+            
+                if (data == 'K') //Pi is done taking a picture
                 {
-                    mowerMode[i] = data;
+                    doneTakingPicture = data;
+                }
+                else if (data == 'L') //object is 30 cm from mower detected by lidar
+                {
+                    objectIsClose = data;
+                }
+                else if (data == 'M' || data == 'A') // mower's mode
+                {       
+                    // fill array with bits from pi
+                    mowerMode[0] = data;
+                }
+            }
+
+            //get the direction of the movement 
+            if (mowerMode[0] == 'M')
+            {
+                if (i < 3)
+                { 
+                    Serial.println("im inside if statement for manual mow");
+                    if (i != 0)
+                        mowerMode[i] = data;
                     i +=1;
                 } 
             }
-        }
-        else{
+
+            //get angles from the lidarsensor
+            if(objectIsClose == 'L')
+            {
+                if(i < 3)
+                {
+                    if (data != 'L') 
+                    {
+                        lidarAngle[i] = data;
+                        i +=1;
+                    }
+                }
+            }
+            else
+            {
+                objectIsClose = ' ';
+            }
+        } else {
             i = 0;
         }
     }
    
-    /*
     Serial.print("mowerMode[0]: ");
     Serial.println(String(mowerMode[0]));
     Serial.print("mowerMode[1]: ");
     Serial.println(String(mowerMode[1]));
     Serial.print("mowerMode[2]: ");
     Serial.println(String(mowerMode[2]));
-    */
     
+    Serial.print("lidarAngle[0]: ");
+    Serial.println(String(lidarAngle[0]));
+    Serial.print("lidarAngle[1]: ");
+    Serial.println(String(lidarAngle[1]));
+    Serial.print("lidarAngle[2]: ");
+    Serial.println(String(lidarAngle[2]));
 
+    
     String inputMode = String(mowerMode[0]);
     inputMode.toUpperCase();
-    // Serial.println(inputMode);
 
     if (inputMode == "M") // Controlling the mower manually
     {
@@ -234,7 +267,6 @@ void avoidObstacles()
     if (millis() < reverseDuration && hasntCrossedLineTwice == true)
     {   
         move(REVERSE, 125);
-
     }
     else if ((millis() >= reverseDuration) && (millis() < turningDuration) && hasntCrossedLineTwice == true)
     {
@@ -246,7 +278,7 @@ void avoidObstacles()
         }
 
         move(LEFT, randomTurningNumber);
-    
+
     }
     else
     {
@@ -301,18 +333,21 @@ void autoMow()
 
         if (sensorState != lineFinder.readSensors())
         {
-            Serial.print("sensorState before: ");
-            Serial.println(sensorState);
-            Serial.println("Out_Out state change");
-            sensorState = lineFinder.readSensors(); 
-            Serial.print("sensorState after: ");
-            Serial.println(sensorState);
+            // Serial.print("sensorState before: ");
+            // Serial.println(sensorState);
+            // Serial.println("Out_Out state change");
+            // sensorState = lineFinder.readSensors(); 
+            // Serial.print("sensorState after: ");
+            // Serial.println(sensorState);
         }
-       else if(ultraSensor.distanceCm() <= 30 /*or lidar value that says object i closer than 30 cm*/) 
-        {
-            sensorState = FOUND_OBJECT;
-        }
-        break;
+    
+    
+    //   else if(ultraSensor.distanceCm() <= 30 /*or lidar value that says object i closer than 30 cm*/) 
+    //    {
+    //        sensorState = FOUND_OBJECT;
+    //    }
+       break;
+        
 
     case FOUND_OBJECT:
         objectDetected();
@@ -405,7 +440,6 @@ void manualMow(char direction, char turnDirection)
     Encoder_2.loop();
 }
 
-
 //used when the mower detects an object inside the confined area
 void objectDetected()
 {
@@ -431,12 +465,14 @@ void objectDetected()
     // backing
     // turning
     // continue forward
-    // avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
-    avoidState = ALIGNING;
+     avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
+    // avoidState = ALIGNING;
     switch (avoidState)
     {
     case ALIGNING:
-        if (doneSwitchingAngle == 'L'){ //make sure do not let lidar keep sending this message or the robot will dance
+        move(STOP,0);
+
+        if (objectIsClose == 'L'){ //make sure do not let lidar keep sending this message or the robot will dance
             Serial.write("R",1);
         }
             avoidState = AVOIDING;
@@ -457,6 +493,10 @@ void objectDetected()
 
         if(doneAligning == true)
         {  
+            if(objectIsClose == 'L')
+            {
+                objectIsClose = ' ';
+            }
             avoidState = TAKEPICTURE;  
         }
 
@@ -476,9 +516,9 @@ void objectDetected()
         break; 
     
     case AVOIDING:
-        //  if (doneSwitchingAngle == 'L'){
+        //  if (objectIsClose == 'L'){
         //     Serial.write("R",1);
-        //     doneSwitchingAngle = ' ';
+        //     objectIsClose = ' ';
         // }
         avoidObstacles();
         avoidState = 0;
