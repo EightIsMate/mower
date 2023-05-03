@@ -1,6 +1,7 @@
 #include <MeAuriga.h>
 #include <Arduino.h>
 #include <Wire.h>
+#include <math.h>
 
 // Defines
 #define AURIGARINGLEDNUM 12
@@ -63,6 +64,9 @@ float x = 0.0;
 float y = 0.0;
 float heading = 0.0;
 
+float prev_x = 0.0;
+float prev_y = 0.0;
+
 //function declarations
 void move(int direction, int speed);
 void avoidObstacles();
@@ -70,13 +74,16 @@ void autoMow();
 void manualMow(char direction, char turnDirection);
 void objectDetected();
 void update_position();
+void isr_process_encoder1(void);
+void isr_process_encoder2(void);
 
 void setup()
 {
     // put your setup code here, to run once:
     Serial.begin(115200);
     gyro.begin();
-
+    attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
+    attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
     // 12 LED Ring controller is on Auriga D44/PWM
     led_ring.setpin(44);
 
@@ -192,6 +199,22 @@ void loop()
     */
     Encoder_1.loop();
     Encoder_2.loop();
+    update_position();
+    // Send the position data to the backend server    
+    // Check if x or y has changed
+    if (x != prev_x || y != prev_y)
+    {
+        // Send the position data to the backend server    
+        Serial.print(x);
+        Serial.print(",");
+        Serial.print(y);
+        Serial.print(",");
+        Serial.println(heading);
+
+        // Update the previous values of x and y
+        prev_x = x;
+        prev_y = y;
+    }
 
 } //--------end of loop--------------
 
@@ -230,6 +253,7 @@ void move(int direction, int speed)
     
     Encoder_1.setMotorPwm(leftSpeed);
     Encoder_2.setMotorPwm(rightSpeed);
+    //update_position();
 }
 
 void avoidObstacles()
@@ -350,55 +374,46 @@ void manualMow(char direction, char turnDirection)
     case 10: // forward
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving forward");
         break;
 
     case 20: // AVOIDING
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving backward");
         break;
 
     case 13: // forward_left
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED / 3;
-        Serial.println("im moving forward_left");
         break;
 
     case 14: // forward_right
         leftSpeed = -MANUALSPEED / 3;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving forward_right");
         break;
 
     case 23: // reverse_left
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED / 3;
-        Serial.println("im moving reverse_left");
         break;
 
     case 24: // reverse_right
         leftSpeed = MANUALSPEED / 3;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving reverse_right");
         break;
 
     case 03: // moving left
         leftSpeed = -MANUALSPEED;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving left");
         break;
 
     case 04: // right
         leftSpeed = MANUALSPEED;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving right");
         break;
 
     case 00: // stop
         leftSpeed = 0;
         rightSpeed = 0;
-        Serial.println("im stopping");
         break;
 
     default:
@@ -489,21 +504,56 @@ void objectDetected()
         break;
     }
 }
+void isr_process_encoder1(void)
+{
+  if(digitalRead(Encoder_1.getPortB()) == 0)
+  {
+    Encoder_1.pulsePosMinus();
+  }
+  else
+  {
+    Encoder_1.pulsePosPlus();
+  }
+}
+
+void isr_process_encoder2(void)
+{
+  if(digitalRead(Encoder_2.getPortB()) == 0)
+  {
+    Encoder_2.pulsePosMinus();
+  }
+  else
+  {
+    Encoder_2.pulsePosPlus();
+  }
+}
 
 void update_position(){
 
-    int ticks_1 = Encoder_1.getPulsePos();
-    int ticks_2 = Encoder_2.getPulsePos();
+    // Get the change in encoder ticks
+    int left_ticks = Encoder_1.getPulsePos();
+    int right_ticks = Encoder_2.getPulsePos();
 
-    float distance_1 = ticks_1 * DISTANCE_PER_TICK;
-    float distance_2 = ticks_2 * DISTANCE_PER_TICK;
+    // Calculate the distance traveled by each wheel
+    float left_distance = left_ticks * DISTANCE_PER_TICK;
+    float right_distance = right_ticks * DISTANCE_PER_TICK;
 
-    float avgDistance = (distance_1 + distance_2) / 2.0;
+    // Calculate the average distance traveled
+    float distance = (left_distance + right_distance) / 2;
 
-    x = avgDistance * cos(heading * PI / 180.0);
-    y = avgDistance * sin(heading * PI / 180.0);
-    heading += (distance_2 - distance_1) / WHEEL_DIAMETER;
+    // Update the gyro heading
+    gyro.update();
+    heading = gyro.getAngleZ();
 
-    Encoder_1.pulsePosReset();
-    Encoder_2.pulsePosReset();
+    // Calculate the change in x and y based on the distance and heading
+    float delta_x = distance * cos(heading * M_PI / 180);
+    float delta_y = distance * sin(heading * M_PI / 180);
+
+    // Update the position
+    x += delta_x;
+    y += delta_y;
+
+    // Reset the encoder ticks
+    Encoder_1.setPulsePos(0);
+    Encoder_2.setPulsePos(0);
 }
