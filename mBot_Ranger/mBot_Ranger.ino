@@ -43,7 +43,7 @@ long int reverseDuration = 0;
 long int turningDuration = 0;
 long int lineDepartureDelay = 0;
 int randomTurningNumber = 0;
-char mowerMode[3] = " "; // array to save bits from pi to mower
+char mowerMode[3] = " "; // ex. M10
 char manualState = 0;
 int avoidState = 0;
 char doneTakingPicture = ' ';
@@ -52,7 +52,7 @@ int lineSensor = 0;
 // Receiving desired angle from lidar
 int receievedAngle = 0;
 char objectIsClose = ' ';
-char lidarAngle[3] = " ";
+char lidarAngle[3] = " "; //ex. 320
 
 //function declarations
 void move(int direction, int speed);
@@ -85,6 +85,7 @@ void setup()
     // read line follower sensor
     sensorState = lineFinder.readSensors();
 
+    //Enter automow mode by default
     mowerMode[0] = 'A';
     mowerMode[1] = '0';
     mowerMode[2] = '0';
@@ -92,46 +93,53 @@ void setup()
 
 // put your main code here, to run repeatedly:
 void loop()
-{
+{   
     while (Serial.available() > 0)
     {
         char data = Serial.read();
 
         if (data != '\n')
         {
-            if (isAlpha(data)) 
+            if (isAlpha(data))
             {
-            
-                if (data == 'K') //Pi is done taking a picture
+                String letter = String(data);
+                letter.toUpperCase();
+                char letter_char[2];
+                letter.toCharArray(letter_char,2);
+
+                if (letter_char[0] == 'K') //Pi is done taking a picture
                 {
-                    doneTakingPicture = data;
+                    doneTakingPicture = letter_char[0];
                 }
-                else if (data == 'L') //object is 30 cm from mower detected by lidar
+                else if (letter_char[0] == 'L') //object is 30 cm from mower,detected by lidar
                 {
-                    objectIsClose = data;
+                    objectIsClose = letter_char[0];
                 }
-                else if (data == 'M' || data == 'A') // mower's mode
-                {       
-                    // fill array with bits from pi
-                    mowerMode[0] = data;
+                else if(letter_char[0] == 'M')
+                {
+                    objectIsClose = ' '; //ignore lidar while in manual state
+                    mowerMode[0] = letter_char[0];
+                }
+                else if (letter_char[0] == 'A') // mower's move modes
+                {   
+                    mowerMode[0] = letter_char[0];   
                 }
             }
 
-            //get the direction of the movement 
+            //if manual move mode chosen
             if (mowerMode[0] == 'M')
             {
+                //fill array with bits from pi to determine direction 
                 if (i < 3)
                 { 
-                    Serial.println("im inside if statement for manual mow");
                     if (i != 0)
                         mowerMode[i] = data;
                     i +=1;
                 } 
             }
-
-            //get angles from the lidarsensor
-            if(objectIsClose == 'L')
+            else if(objectIsClose == 'L') //if an object is closer than 30cm from  the robot
             {
+                //fill array with bits to determine lidar angle
                 if(i < 3)
                 {
                     if (data != 'L') 
@@ -140,30 +148,38 @@ void loop()
                         i +=1;
                     }
                 }
+                else
+                {
+                    objectIsClose = ' ';
+                } 
+                if (i == 3)
+                    sensorState = FOUND_OBJECT;
             }
-            else
-            {
-                objectIsClose = ' ';
-            }
-        } else {
+
+
+        }else{
+            //reset i  
             i = 0;
         }
     }
    
-    Serial.print("mowerMode[0]: ");
-    Serial.println(String(mowerMode[0]));
-    Serial.print("mowerMode[1]: ");
-    Serial.println(String(mowerMode[1]));
-    Serial.print("mowerMode[2]: ");
-    Serial.println(String(mowerMode[2]));
-    
-    Serial.print("lidarAngle[0]: ");
-    Serial.println(String(lidarAngle[0]));
-    Serial.print("lidarAngle[1]: ");
-    Serial.println(String(lidarAngle[1]));
-    Serial.print("lidarAngle[2]: ");
-    Serial.println(String(lidarAngle[2]));
+    // Serial.print("mowerMode[0]: ");
+    // Serial.println(String(mowerMode[0]));
+    // Serial.print("mowerMode[1]: ");
+    // Serial.println(String(mowerMode[1]));
+    // Serial.print("mowerMode[2]: ");
+    // Serial.println(String(mowerMode[2]));
 
+    // Serial.println(" ");
+
+    // Serial.print("lidarAngle[0]: ");
+    // Serial.println(String(lidarAngle[0]));
+    // Serial.print("lidarAngle[1]: ");
+    // Serial.println(String(lidarAngle[1]));
+    // Serial.print("lidarAngle[2]: ");
+    // Serial.println(String(lidarAngle[2]));
+
+    // Serial.println(" ");
     
     String inputMode = String(mowerMode[0]);
     inputMode.toUpperCase();
@@ -324,7 +340,7 @@ void autoMow()
         avoidObstacles();
         break;
 
-    case S1_OUT_S2_OUT:
+    case S1_OUT_S2_OUT: 
         avoidObstaclesInit = false;
         haveChosenRandomValue = false;
         hasntCrossedLineTwice = true;
@@ -333,12 +349,7 @@ void autoMow()
 
         if (sensorState != lineFinder.readSensors())
         {
-            // Serial.print("sensorState before: ");
-            // Serial.println(sensorState);
-            // Serial.println("Out_Out state change");
-            // sensorState = lineFinder.readSensors(); 
-            // Serial.print("sensorState after: ");
-            // Serial.println(sensorState);
+             sensorState = lineFinder.readSensors(); 
         }
     
     
@@ -379,55 +390,55 @@ void manualMow(char direction, char turnDirection)
     case 10: // forward
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving forward");
+        // Serial.println("im moving forward");
         break;
 
     case 20: // AVOIDING
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving backward");
+        // Serial.println("im moving backward");
         break;
 
     case 13: // forward_left
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED / 3;
-        Serial.println("im moving forward_left");
+        // Serial.println("im moving forward_left");
         break;
 
     case 14: // forward_right
         leftSpeed = -MANUALSPEED / 3;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving forward_right");
+        // Serial.println("im moving forward_right");
         break;
 
     case 23: // reverse_left
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED / 3;
-        Serial.println("im moving reverse_left");
+        // Serial.println("im moving reverse_left");
         break;
 
     case 24: // reverse_right
         leftSpeed = MANUALSPEED / 3;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving reverse_right");
+        // Serial.println("im moving reverse_right");
         break;
 
     case 03: // moving left
         leftSpeed = -MANUALSPEED;
         rightSpeed = -MANUALSPEED;
-        Serial.println("im moving left");
+        // Serial.println("im moving left")
         break;
 
     case 04: // right
         leftSpeed = MANUALSPEED;
         rightSpeed = MANUALSPEED;
-        Serial.println("im moving right");
+        // Serial.println("im moving right")
         break;
 
     case 00: // stop
         leftSpeed = 0;
         rightSpeed = 0;
-        Serial.println("im stopping");
+        // Serial.println("im stopping");
         break;
 
     default:
@@ -447,15 +458,17 @@ void objectDetected()
 
     //get gyro angle
     gyro.update(); 
-    Serial.print(" Z:");
+    Serial.print("GyroAngleZ:");
     Serial.println(gyro.getAngleZ());
 
     //get distance from low object detected by ultrasonic sensor
-    Serial.print("Distance : ");
+    Serial.print("Ultrasonic distance : ");
     Serial.print(ultraSensor.distanceCm());
     Serial.println(" cm");
 
     float CurrentgyroAngleZ = gyro.getAngleZ();
+    // Serial.println(CurrentgyroAngleZ);
+    
     // line up with the object in detection area to take picture then back and turn
     // if object is detected either via lidar or ultrasonic sensor
     // turn robot so the object is aligned with its front its front 
@@ -465,17 +478,55 @@ void objectDetected()
     // backing
     // turning
     // continue forward
-     avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
-    // avoidState = ALIGNING;
-    switch (avoidState)
-    {
-    case ALIGNING:
-        move(STOP,0);
 
-        if (objectIsClose == 'L'){ //make sure do not let lidar keep sending this message or the robot will dance
-            Serial.write("R",1);
+    //avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
+    avoidState = ALIGNING;
+    
+    switch (avoidState){
+        
+    case ALIGNING:
+    
+        move(STOP,0);//stop while aligning 
+        float getLidarAngle; 
+        float turningGyroAngleZ; //converting thelidarngle to gyroangle
+        float newDesiredGyroAngleZ; //the desired angle that we want to turn to
+
+        //convert the lidarvalues to float in order to compare with gyrovalues
+        getLidarAngle = atof(lidarAngle);
+
+        if (getLidarAngle > 180) 
+        {
+            turningGyroAngleZ = -(360 - getLidarAngle);
         }
-            avoidState = AVOIDING;
+        else 
+        {
+            turningGyroAngleZ = getLidarAngle;
+        }
+
+        newDesiredGyroAngleZ = CurrentgyroAngleZ + turningGyroAngleZ;
+
+        if (newDesiredGyroAngleZ > 180)
+        {
+            newDesiredGyroAngleZ = 180 - newDesiredGyroAngleZ;
+        }
+        else if (newDesiredGyroAngleZ < (-180))
+        {
+            newDesiredGyroAngleZ + 360;
+        }
+        
+
+        Serial.print("The desired angle of Gyroscope is :");
+        Serial.println(newDesiredGyroAngleZ);
+        if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 5) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 5 ))
+        {
+            move(STOP,0);
+        }
+        else 
+        {
+            move(LEFT, 200);
+        }
+    
+        avoidState = AVOIDING;
         //if aligning done then go to TAKEPICTURE state
         // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
         // {
@@ -491,6 +542,8 @@ void objectDetected()
         //     doneAligning = true;
         // }
 
+
+        //done aligning, reset char variable and change state
         if(doneAligning == true)
         {  
             if(objectIsClose == 'L')
@@ -503,8 +556,7 @@ void objectDetected()
         break;
         
     case TAKEPICTURE:
-        //stop for a few sec and then take a picture of the obstacle. tell raspberrypi to take a picture
-        //move(STOP,0);
+
         Serial.write("P",1); //tell pi to take picture
 
         // set next state if pi is done taking picture
