@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+//hell
+
 // Defines
 #define AURIGARINGLEDNUM 12
 #define RINGALLLEDS 0
