@@ -2,12 +2,13 @@ import serial
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 
 
 def draw_robot_position(x_pos, y_pos, heading_pos, prev_positions_pos):
     plt.cla()  # Clear the current axes
-    # plt.xlim(-5, 5)
-    # plt.ylim(-5, 5)
+    #plt.xlim(-5.0, 5.0)
+    #plt.ylim(-5.0, 5.0)
 
     # Plot the robot's path as a line
     if len(prev_positions_pos) > 1:
@@ -50,14 +51,18 @@ while True:
         print("in while")
         line = serial_port.readline().decode(errors='ignore').strip()
         print(line)
+        x =0
+        y = 0
+        heading = 0.0
 
         # Extract values and append to the lists
-        x = float(line.split(',')[0])
+        x += float(line.split(',')[0])
         print(f"x: {x}")
-        y = float(line.split(',')[1])
+        y += float(line.split(',')[1])
         print(f"y: {y}")
         heading = float(line.split(',')[2])
         print(f"heading: {heading}")
+        
 
         prev_positions.append((x, y))
 

@@ -14,7 +14,9 @@
 #define STOP 5
 
 #define REVERSEDURATION 1.5 * 1000 // 1,5
-#define TURNINGDURATION 1.0 * 1000 // 1sec
+#define TURNINGDURATION 1.0 * 1000 // 1 sec
+
+#define DURATION 2.0 * 1000 //2 sek
 
 #define MANUALSPEED 125
 
@@ -32,8 +34,8 @@ MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
-const float WHEEL_DIAMETER = 4.0;    // Diameter of the wheels in cm
-const float WHEEL_CIRCUMFERENCE = PI * WHEEL_DIAMETER;  // Circumference of the wheels
+const float WHEEL_DIAMETER = 40.0;    // Diameter of the wheels in mm
+const float WHEEL_CIRCUMFERENCE = M_PI * WHEEL_DIAMETER;  // Circumference of the wheels
 const int ENCODER_RESOLUTION = 180;  // Encoder resolution (number of ticks per revolution)
 const float DISTANCE_PER_TICK = WHEEL_CIRCUMFERENCE / ENCODER_RESOLUTION;  // Distance traveled per encoder tick
 
@@ -44,10 +46,23 @@ bool doneAvoiding = false;
 bool haveChosenRandomValue = false;
 bool doneAligning = false;
 bool doneTurning = false;
+bool hasStopped = false;
 int sensorState = 0;
 long int reverseDuration = 0;
 long int turningDuration = 0;
 long int lineDepartureDelay = 0;
+
+//Duration for testing dead reckoning
+bool setDurations = false;
+long int forwardDuration = 0;
+long int trunLeftDuration = 0;
+long int forwardDuration2 = 0;
+long int trunLeftDuration2 = 0;
+long int sendingDelay = 0;
+int16_t LineFollowFlag = 0;
+float deltaX = 0.0;
+float deltaY = 0.0;
+
 int randomTurningNumber = 0;
 char mowerMode[3] = " "; // array to save bits from pi to mower
 char manualState = 0;
@@ -76,6 +91,8 @@ void objectDetected();
 void update_position();
 void isr_process_encoder1(void);
 void isr_process_encoder2(void);
+
+void line_model(void);
 
 void setup()
 {
@@ -171,6 +188,8 @@ void loop()
         move(STOP, 0);
         led_ring.setColor(RINGALLLEDS, 50, 0, 0);
         led_ring.show();
+        hasStopped = true;
+
     }
     
     // Serial.println(String(raspCom));
@@ -204,12 +223,33 @@ void loop()
     // Check if x or y has changed
     if (x != prev_x || y != prev_y)
     {
-        // Send the position data to the backend server    
-        Serial.print(x);
-        Serial.print(",");
-        Serial.print(y);
-        Serial.print(",");
-        Serial.println(heading);
+        deltaX = abs(x - prev_x);
+        deltaY = abs(y - prev_y);
+        // if (deltaX != 0.0 || deltaY != 0.0)
+        // {
+        //     Serial.print("deltaX: ");
+        //     Serial.println(deltaX);
+        //     Serial.print("deltaY: ");
+        //     Serial.println(deltaY);
+        // }
+        
+        
+        if (setDurations == false)
+        {
+            sendingDelay = millis() + 100;
+            setDurations = true;
+        }
+        
+
+        if(millis() > sendingDelay){
+            // Send the position data to the backend server    
+            Serial.print(x);
+            Serial.print(",");
+            Serial.print(y);
+            Serial.print(",");
+            Serial.println(heading);
+            setDurations = false;
+        }
 
         // Update the previous values of x and y
         prev_x = x;
@@ -229,26 +269,35 @@ void move(int direction, int speed)
     {
         leftSpeed = -speed;
         rightSpeed = speed;
+        hasStopped = false;
     }
     else if (direction == REVERSE)
     {
         leftSpeed = speed;
         rightSpeed = -speed;
+        hasStopped = false;
+
     }
     else if (direction == LEFT)
     {
         leftSpeed = -speed;
         rightSpeed = -speed;
+        hasStopped = false;
+
     }
     else if (direction == RIGHT)
     {
         leftSpeed = speed;
         rightSpeed = speed;
+        hasStopped = false;
+
     }
     else if (direction == STOP)
     {
         leftSpeed = 0;
         rightSpeed = 0;
+        hasStopped = true;
+
     }
     
     Encoder_1.setMotorPwm(leftSpeed);
@@ -334,13 +383,41 @@ void autoMow()
         avoidObstaclesInit = false;
         haveChosenRandomValue = false;
         hasntCrossedLineTwice = true;
+        // if(setDurations == false){
+        //     setDurations = true;
+        //     forwardDuration = millis() + DURATION;
+        //     trunLeftDuration = millis() + DURATION + DURATION;
+        //     forwardDuration2 = millis() + DURATION + DURATION + DURATION;
+        //     trunLeftDuration2 = millis() + DURATION + DURATION + DURATION + DURATION;
+        // }
+        line_model();
+        //move(FORWARD, 120);
+        // if (millis() < forwardDuration)
+        // {
+        //     move(FORWARD, 125 );
+        // }
+        // else if (millis() >= forwardDuration && millis() < trunLeftDuration)
+        // {
+        //     move(LEFT, 99);
+        // }
+        // else if (millis() >= forwardDuration && millis() >= trunLeftDuration && millis() < forwardDuration2)
+        // {
+        //     move(FORWARD, 125);
+        // }
+        // else if (millis() >= forwardDuration && millis() >= trunLeftDuration && millis() >= forwardDuration2 && millis() < trunLeftDuration2)
+        // {
+        //     move(LEFT, 99);
+        // }
+        // else{
+        //     setDurations = false;
+        // }
+        
+        
 
-        move(FORWARD, 125 );
-
-        if (sensorState != lineFinder.readSensors())
-        {
-            sensorState = lineFinder.readSensors(); 
-        }
+        // if (sensorState != lineFinder.readSensors())
+        // {
+        //     sensorState = lineFinder.readSensors(); 
+        // }
         // else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
         // {
         //     sensorState = FOUND_OBJECT;
@@ -374,46 +451,55 @@ void manualMow(char direction, char turnDirection)
     case 10: // forward
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
         break;
 
-    case 20: // AVOIDING
+    case 20: // Reverse
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED;
+        hasStopped = false;
         break;
 
     case 13: // forward_left
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED / 3;
+        hasStopped = false;
         break;
 
     case 14: // forward_right
         leftSpeed = -MANUALSPEED / 3;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
         break;
 
     case 23: // reverse_left
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED / 3;
+        hasStopped = false;
         break;
 
     case 24: // reverse_right
         leftSpeed = MANUALSPEED / 3;
         rightSpeed = -MANUALSPEED;
+        hasStopped = false;
         break;
 
     case 03: // moving left
         leftSpeed = -MANUALSPEED;
         rightSpeed = -MANUALSPEED;
+        hasStopped = false;
         break;
 
     case 04: // right
         leftSpeed = MANUALSPEED;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
         break;
 
     case 00: // stop
         leftSpeed = 0;
         rightSpeed = 0;
+        hasStopped = true;
         break;
 
     default:
@@ -538,9 +624,15 @@ void update_position(){
     float left_distance = left_ticks * DISTANCE_PER_TICK;
     float right_distance = right_ticks * DISTANCE_PER_TICK;
 
+    float distance = 0.0;
     // Calculate the average distance traveled
-    float distance = (left_distance + right_distance) / 2;
-
+    if (left_distance + right_distance == 0 && hasStopped == false)
+    {
+       distance += 1.0;
+    }
+    else{
+        distance = (left_distance + right_distance) / 2;
+    }
     // Update the gyro heading
     gyro.update();
     heading = gyro.getAngleZ();
@@ -548,6 +640,8 @@ void update_position(){
     // Calculate the change in x and y based on the distance and heading
     float delta_x = distance * cos(heading * M_PI / 180);
     float delta_y = distance * sin(heading * M_PI / 180);
+    // float delta_x = left_distance * cos(heading * M_PI / 180);
+    // float delta_y = left_distance * sin(heading * M_PI / 180);
 
     // Update the position
     x += delta_x;
@@ -556,4 +650,33 @@ void update_position(){
     // Reset the encoder ticks
     Encoder_1.setPulsePos(0);
     Encoder_2.setPulsePos(0);
+}
+
+void line_model(void)
+{
+  uint8_t val;
+  val = lineFinder.readSensors();
+  switch (val)
+  {
+    case S1_IN_S2_IN:
+        move(FORWARD, 120);
+        LineFollowFlag=10;
+        break;
+
+    case S1_IN_S2_OUT:
+        move(FORWARD, 120);
+        if (LineFollowFlag>1) LineFollowFlag--;
+        break;
+
+    case S1_OUT_S2_IN:
+        move(FORWARD, 120);
+        if (LineFollowFlag<20) LineFollowFlag++;
+        break;
+
+    case S1_OUT_S2_OUT:
+        if(LineFollowFlag==10) move(REVERSE, 120);
+        if(LineFollowFlag<10) move(LEFT, 120);
+        if(LineFollowFlag>10) move(RIGHT, 120);
+        break;
+  }
 }
