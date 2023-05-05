@@ -25,6 +25,8 @@
 #define TAKEPICTURE 2
 #define AVOIDING 3
 
+#define GYRO_OFFSET 5.0
+
 
 MeRGBLed led_ring(0, 12);
 MeLineFollower lineFinder(PORT_9);
@@ -34,6 +36,7 @@ MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
 //declared variables
+bool calkGyroAngle = false;
 bool hasntCrossedLineTwice = false;
 bool avoidObstaclesInit = false;
 bool doneAvoiding = false;
@@ -155,7 +158,10 @@ void loop()
                     objectIsClose = ' ';
                 } 
                 if (i == 3)
+                {
+                    calkGyroAngle = true;
                     sensorState = FOUND_OBJECT;
+                }
             }
 
 
@@ -310,7 +316,6 @@ void avoidObstacles()
 
     // avoid crossing line twice 
     if(hasntCrossedLineTwice == true && millis() > lineDepartureDelay){
-
         if (lineSensor != S1_OUT_S2_OUT )
         {
             hasntCrossedLineTwice = false;
@@ -460,13 +465,13 @@ void objectDetected()
 
     //get gyro angle
     gyro.update(); 
-    Serial.print("GyroAngleZ:");
-    Serial.println(gyro.getAngleZ());
+    // Serial.print("GyroAngleZ:");
+    // Serial.println(gyro.getAngleZ());
 
-    //get distance from low object detected by ultrasonic sensor
-    Serial.print("Ultrasonic distance : ");
-    Serial.print(ultraSensor.distanceCm());
-    Serial.println(" cm");
+    // //get distance from low object detected by ultrasonic sensor
+    // Serial.print("Ultrasonic distance : ");
+    // Serial.print(ultraSensor.distanceCm());
+    // Serial.println(" cm");
 
     float CurrentgyroAngleZ = gyro.getAngleZ();
     // Serial.println(CurrentgyroAngleZ);
@@ -490,22 +495,25 @@ void objectDetected()
     
         move(STOP,0);//stop while aligning 
         float getLidarAngle; 
-        float turningGyroAngleZ; //converting thelidarngle to gyroangle
+        float turningGyroAngleZ; //converting a lidarangle to a gyroangle
         float newDesiredGyroAngleZ; //the desired angle that we want to turn to
 
         //convert the lidarvalues to float in order to compare with gyrovalues
         getLidarAngle = atof(lidarAngle);
 
-        if (getLidarAngle > 180) 
+        if (getLidarAngle > 180) //on the left side 
         {
             turningGyroAngleZ = -(360 - getLidarAngle);
         }
-        else 
+        else //on the right
         {
             turningGyroAngleZ = getLidarAngle;
         }
-
-        newDesiredGyroAngleZ = CurrentgyroAngleZ + turningGyroAngleZ;
+        if (calkGyroAngle == true)
+        {
+            newDesiredGyroAngleZ = CurrentgyroAngleZ + turningGyroAngleZ;
+            calkGyroAngle = false;
+        }
 
         if (newDesiredGyroAngleZ > 180)
         {
@@ -515,19 +523,66 @@ void objectDetected()
         {
             newDesiredGyroAngleZ + 360;
         }
-        
-
         Serial.print("The desired angle of Gyroscope is :");
         Serial.println(newDesiredGyroAngleZ);
-        if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 5) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 5 ))
+        Serial.print("Current angle of Z:");
+        Serial.println(CurrentgyroAngleZ);
+
+        //if already aligned
+        if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 2) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 2 ))
         {
             move(STOP,0);
         }
-        else 
+        else  //not aligned yet
         {
-            move(LEFT, 200);
+            //both is negative
+            if(CurrentgyroAngleZ < 0 && newDesiredGyroAngleZ < 0) 
+            { 
+                if(CurrentgyroAngleZ < newDesiredGyroAngleZ) 
+                {
+                    move(RIGHT, 200);
+                }
+                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
+                {
+                    move(LEFT, 200);
+                }
+            }
+
+            //both is positive   
+            if(CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ >=0)
+            {
+                if(CurrentgyroAngleZ < newDesiredGyroAngleZ)
+                {
+                    move(RIGHT, 200);
+                }
+                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
+                {
+                    move(LEFT, 200);
+                }
+            } 
+
+
+            //one positive, one negative 
+            if(CurrentgyroAngleZ <=0 && newDesiredGyroAngleZ < 0 )
+            {
+                move(RIGHT, 200);
+            }
+
+
+            if((CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ < 0) || (CurrentgyroAngleZ <0 && newDesiredGyroAngleZ >= 0 ))
+            {
+                if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
+                {
+                    move(RIGHT, 200);
+                }
+                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
+                {
+                    move(LEFT, 200);
+                }
+            } 
         }
-    
+        
+
         avoidState = AVOIDING;
         //if aligning done then go to TAKEPICTURE state
         // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
