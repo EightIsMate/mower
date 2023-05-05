@@ -47,6 +47,7 @@ bool haveChosenRandomValue = false;
 bool doneAligning = false;
 bool doneTurning = false;
 bool hasStopped = false;
+bool isReversing = false;
 int sensorState = 0;
 long int reverseDuration = 0;
 long int turningDuration = 0;
@@ -270,12 +271,14 @@ void move(int direction, int speed)
         leftSpeed = -speed;
         rightSpeed = speed;
         hasStopped = false;
+        isReversing = false;
     }
     else if (direction == REVERSE)
     {
         leftSpeed = speed;
         rightSpeed = -speed;
         hasStopped = false;
+        isReversing = true;
 
     }
     else if (direction == LEFT)
@@ -283,6 +286,7 @@ void move(int direction, int speed)
         leftSpeed = -speed;
         rightSpeed = -speed;
         hasStopped = false;
+        isReversing = false;
 
     }
     else if (direction == RIGHT)
@@ -290,6 +294,7 @@ void move(int direction, int speed)
         leftSpeed = speed;
         rightSpeed = speed;
         hasStopped = false;
+        isReversing = false;
 
     }
     else if (direction == STOP)
@@ -297,7 +302,7 @@ void move(int direction, int speed)
         leftSpeed = 0;
         rightSpeed = 0;
         hasStopped = true;
-
+        isReversing = false;
     }
     
     Encoder_1.setMotorPwm(leftSpeed);
@@ -390,8 +395,8 @@ void autoMow()
         //     forwardDuration2 = millis() + DURATION + DURATION + DURATION;
         //     trunLeftDuration2 = millis() + DURATION + DURATION + DURATION + DURATION;
         // }
-        line_model();
-        //move(FORWARD, 120);
+        //line_model();
+        move(FORWARD, 120);
         // if (millis() < forwardDuration)
         // {
         //     move(FORWARD, 125 );
@@ -414,10 +419,10 @@ void autoMow()
         
         
 
-        // if (sensorState != lineFinder.readSensors())
-        // {
-        //     sensorState = lineFinder.readSensors(); 
-        // }
+        if (sensorState != lineFinder.readSensors())
+        {
+            sensorState = lineFinder.readSensors(); 
+        }
         // else if(ultraSensor.distanceCm() <= 30 /*or lidar gives angle directions*/)
         // {
         //     sensorState = FOUND_OBJECT;
@@ -452,24 +457,28 @@ void manualMow(char direction, char turnDirection)
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED;
         hasStopped = false;
+        isReversing = false;
         break;
 
     case 20: // Reverse
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED;
         hasStopped = false;
+        isReversing = true;
         break;
 
     case 13: // forward_left
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED / 3;
         hasStopped = false;
+        isReversing = false;
         break;
 
     case 14: // forward_right
         leftSpeed = -MANUALSPEED / 3;
         rightSpeed = MANUALSPEED;
         hasStopped = false;
+        isReversing = false;
         break;
 
     case 23: // reverse_left
@@ -488,18 +497,21 @@ void manualMow(char direction, char turnDirection)
         leftSpeed = -MANUALSPEED;
         rightSpeed = -MANUALSPEED;
         hasStopped = false;
+        isReversing = false;
         break;
 
     case 04: // right
         leftSpeed = MANUALSPEED;
         rightSpeed = MANUALSPEED;
         hasStopped = false;
+        isReversing = false;
         break;
 
     case 00: // stop
         leftSpeed = 0;
         rightSpeed = 0;
         hasStopped = true;
+        isReversing = false;
         break;
 
     default:
@@ -628,7 +640,13 @@ void update_position(){
     // Calculate the average distance traveled
     if (left_distance + right_distance == 0 && hasStopped == false)
     {
-       distance += 1.0;
+        if (isReversing == true)
+        {
+            distance -= 1.0;
+        }
+        else{
+            distance += 1.0;
+        }
     }
     else{
         distance = (left_distance + right_distance) / 2;
