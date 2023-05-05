@@ -2,8 +2,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-//hell
-
 // Defines
 #define AURIGARINGLEDNUM 12
 #define RINGALLLEDS 0
@@ -535,51 +533,11 @@ void objectDetected()
         }
         else  //not aligned yet
         {
-            //both is negative
-            if(CurrentgyroAngleZ < 0 && newDesiredGyroAngleZ < 0) 
-            { 
-                if(CurrentgyroAngleZ < newDesiredGyroAngleZ) 
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            }
-
-            //both is positive   
-            if(CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ >=0)
-            {
-                if(CurrentgyroAngleZ < newDesiredGyroAngleZ)
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            } 
-
-
-            //one positive, one negative 
-            if(CurrentgyroAngleZ <=0 && newDesiredGyroAngleZ < 0 )
-            {
-                move(RIGHT, 200);
-            }
-
-
-            if((CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ < 0) || (CurrentgyroAngleZ <0 && newDesiredGyroAngleZ >= 0 ))
-            {
-                if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            } 
+            //use lidar angle to determine turning left or right
+            if (getLidarAngle > 180) 
+                move(LEFT,200);
+            else
+                move(RIGHT,200);
         }
         
 
