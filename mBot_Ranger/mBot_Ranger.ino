@@ -463,28 +463,15 @@ void objectDetected()
 {
     Serial.println("Found object");
 
-    //get gyro angle
+    //get current gyro angle
     gyro.update(); 
-    // Serial.print("GyroAngleZ:");
-    // Serial.println(gyro.getAngleZ());
 
-    // //get distance from low object detected by ultrasonic sensor
+    //print distance from low object detected by ultrasonic sensor
     // Serial.print("Ultrasonic distance : ");
     // Serial.print(ultraSensor.distanceCm());
     // Serial.println(" cm");
 
     float CurrentgyroAngleZ = gyro.getAngleZ();
-    // Serial.println(CurrentgyroAngleZ);
-    
-    // line up with the object in detection area to take picture then back and turn
-    // if object is detected either via lidar or ultrasonic sensor
-    // turn robot so the object is aligned with its front its front 
-    // take picture
-    // done taking photo?
-    // if yes
-    // backing
-    // turning
-    // continue forward
 
     //avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
     avoidState = ALIGNING;
@@ -492,8 +479,12 @@ void objectDetected()
     switch (avoidState){
         
     case ALIGNING:
-    
-        move(STOP,0);//stop while aligning 
+        
+        if(doneAligning == false){
+            move(STOP,0);
+            Serial.println("i stopped");
+        }
+        
         float getLidarAngle; 
         float turningGyroAngleZ; //converting a lidarangle to a gyroangle
         float newDesiredGyroAngleZ; //the desired angle that we want to turn to
@@ -509,6 +500,7 @@ void objectDetected()
         {
             turningGyroAngleZ = getLidarAngle;
         }
+
         if (calkGyroAngle == true)
         {
             newDesiredGyroAngleZ = CurrentgyroAngleZ + turningGyroAngleZ;
@@ -523,15 +515,17 @@ void objectDetected()
         {
             newDesiredGyroAngleZ + 360;
         }
-        Serial.print("The desired angle of Gyroscope is :");
-        Serial.println(newDesiredGyroAngleZ);
-        Serial.print("Current angle of Z:");
-        Serial.println(CurrentgyroAngleZ);
+
+        //Serial.print("The desired angle of Gyroscope is :");
+       // Serial.println(newDesiredGyroAngleZ);
+       // Serial.print("Current angle of Z:");
+       // Serial.println(CurrentgyroAngleZ);
 
         //if already aligned
         if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 2) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 2 ))
         {
-            move(STOP,0);
+            doneAligning = true;
+            Serial.println("doneAligning inside already aligned if statement");
         }
         else  //not aligned yet
         {
@@ -561,13 +555,11 @@ void objectDetected()
                 }
             } 
 
-
             //one positive, one negative 
             if(CurrentgyroAngleZ <=0 && newDesiredGyroAngleZ < 0 )
             {
                 move(RIGHT, 200);
             }
-
 
             if((CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ < 0) || (CurrentgyroAngleZ <0 && newDesiredGyroAngleZ >= 0 ))
             {
@@ -581,32 +573,18 @@ void objectDetected()
                 }
             } 
         }
-        
 
-        avoidState = AVOIDING;
-        //if aligning done then go to TAKEPICTURE state
-        // if( alignedGyroValue != gyroValue)  //-z is left min. -180 and z is right with max. 180 degrees
-        // {
-                // if (CurrentgyroAngleZ > 43 && CurrentgyroAngleZ < 47){
-                    // center to the desired angle
-                //     move(STOP, 0);
-                // } 
-                // else{
-                //     move(LEFT, 200);
-                // }
-        //     //align the robot
-        // } else{
-        //     doneAligning = true;
-        // }
+        //avoidState = AVOIDING; //this is in this state for debugpurpose only
 
-
-        //done aligning, reset char variable and change state
+        //done aligning, reset char and change state
         if(doneAligning == true)
         {  
             if(objectIsClose == 'L')
             {
                 objectIsClose = ' ';
             }
+
+            doneAligning = false;
             avoidState = TAKEPICTURE;  
         }
 
@@ -614,21 +592,21 @@ void objectDetected()
         
     case TAKEPICTURE:
 
-        Serial.write("P",1); //tell pi to take picture
+       // Serial.write("P",1); //tell pi to take picture
 
         // set next state if pi is done taking picture
-        if (doneTakingPicture == 'K'){
-            doneTakingPicture = ' ';
-            avoidState = AVOIDING;
-        } 
-            
+       // if (doneTakingPicture == 'K'){
+       //     doneTakingPicture = ' ';
+       //     avoidState = AVOIDING;
+       // } 
+
+       Serial.println(" ");
+       Serial.println("im taking a picture");
+       Serial.println(" ");
+        
         break; 
     
     case AVOIDING:
-        //  if (objectIsClose == 'L'){
-        //     Serial.write("R",1);
-        //     objectIsClose = ' ';
-        // }
         avoidObstacles();
         avoidState = 0;
         break;
