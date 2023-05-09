@@ -2,8 +2,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-//hell
-
 // Defines
 #define AURIGARINGLEDNUM 12
 #define RINGALLLEDS 0
@@ -474,17 +472,17 @@ void objectDetected()
     float CurrentgyroAngleZ = gyro.getAngleZ();
 
     //avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
-    avoidState = ALIGNING;
+
+    if(doneAligning == false)
+    {
+        avoidState = ALIGNING;
+    }
     
     switch (avoidState){
         
     case ALIGNING:
-        
-        if(doneAligning == false){
-            move(STOP,0);
-            Serial.println("i stopped");
-        }
-        
+
+        move(STOP,0);
         float getLidarAngle; 
         float turningGyroAngleZ; //converting a lidarangle to a gyroangle
         float newDesiredGyroAngleZ; //the desired angle that we want to turn to
@@ -524,68 +522,31 @@ void objectDetected()
         //if already aligned
         if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 2) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 2 ))
         {
+            move(STOP,0);
             doneAligning = true;
-            Serial.println("doneAligning inside already aligned if statement");
+            Serial.println("doneAligning first time");
+            Serial.println(doneAligning);
         }
         else  //not aligned yet
         {
-            //both is negative
-            if(CurrentgyroAngleZ < 0 && newDesiredGyroAngleZ < 0) 
-            { 
-                if(CurrentgyroAngleZ < newDesiredGyroAngleZ) 
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            }
-
-            //both is positive   
-            if(CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ >=0)
-            {
-                if(CurrentgyroAngleZ < newDesiredGyroAngleZ)
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            } 
-
-            //one positive, one negative 
-            if(CurrentgyroAngleZ <=0 && newDesiredGyroAngleZ < 0 )
-            {
-                move(RIGHT, 200);
-            }
-
-            if((CurrentgyroAngleZ >= 0 && newDesiredGyroAngleZ < 0) || (CurrentgyroAngleZ <0 && newDesiredGyroAngleZ >= 0 ))
-            {
-                if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(RIGHT, 200);
-                }
-                else if(CurrentgyroAngleZ > newDesiredGyroAngleZ)
-                {
-                    move(LEFT, 200);
-                }
-            } 
+            //use lidar angle to determine turning left or right
+            if (getLidarAngle > 180) 
+                move(LEFT,200);
+            else
+                move(RIGHT,200);
         }
 
         //avoidState = AVOIDING; //this is in this state for debugpurpose only
 
         //done aligning, reset char and change state
         if(doneAligning == true)
-        {  
+        {   
             if(objectIsClose == 'L')
             {
                 objectIsClose = ' ';
-            }
+            } 
 
-            doneAligning = false;
-            avoidState = TAKEPICTURE;  
+            avoidState = TAKEPICTURE; 
         }
 
         break;
@@ -602,13 +563,13 @@ void objectDetected()
 
        Serial.println(" ");
        Serial.println("im taking a picture");
-       Serial.println(" ");
-        
+    
         break; 
     
     case AVOIDING:
         avoidObstacles();
         avoidState = 0;
+        doneAligning = false;
         break;
     
     default:
