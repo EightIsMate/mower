@@ -350,7 +350,7 @@ void autoMow()
         haveChosenRandomValue = false;
         hasntCrossedLineTwice = true;
 
-        move(FORWARD, 125 );
+        //move(FORWARD, 125 );
 
         if (sensorState != lineFinder.readSensors())
         {
@@ -475,6 +475,8 @@ void objectDetected()
 
     if(doneAligning == false)
     {
+        Serial.print("The aovidState is: ");
+        Serial.println(avoidState);
         avoidState = ALIGNING;
     }
     
@@ -526,6 +528,7 @@ void objectDetected()
             doneAligning = true;
             Serial.println("doneAligning first time");
             Serial.println(doneAligning);
+            avoidState = TAKEPICTURE;
         }
         else  //not aligned yet
         {
@@ -539,15 +542,15 @@ void objectDetected()
         //avoidState = AVOIDING; //this is in this state for debugpurpose only
 
         //done aligning, reset char and change state
-        if(doneAligning == true)
-        {   
-            if(objectIsClose == 'L')
-            {
-                objectIsClose = ' ';
-            } 
+        // if(doneAligning == true)
+        // {   
+        //     if(objectIsClose == 'L')
+        //     {
+        //         objectIsClose = ' ';
+        //     } 
 
-            avoidState = TAKEPICTURE; 
-        }
+        //     avoidState = TAKEPICTURE; 
+        // }
 
         break;
         
@@ -563,16 +566,19 @@ void objectDetected()
 
        Serial.println(" ");
        Serial.println("im taking a picture");
-    
+       avoidState = AVOIDING;
         break; 
     
     case AVOIDING:
-        avoidObstacles();
         avoidState = 0;
         doneAligning = false;
+        sensorState = S1_IN_S2_OUT; //to prevent entering to aligning again
+        // doneAligning = false;
+        avoidObstacles();
+        //break;
         break;
     
     default:
-        break;
+        return;
     }
 }
