@@ -1,6 +1,7 @@
 #include <MeAuriga.h>
 #include <Arduino.h>
 #include <Wire.h>
+#include <math.h>
 
 // Defines
 #define AURIGARINGLEDNUM 12
@@ -13,7 +14,9 @@
 #define STOP 5
 
 #define REVERSEDURATION 1.5 * 1000 // 1,5
-#define TURNINGDURATION 1.0 * 1000 // 1sec
+#define TURNINGDURATION 1.0 * 1000 // 1 sec
+
+#define DURATION 2.0 * 1000 //2 sek
 
 #define MANUALSPEED 125
 
@@ -33,6 +36,11 @@ MeUltrasonicSensor ultraSensor(PORT_7);
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 
+const float WHEEL_DIAMETER = 40.0;    // Diameter of the wheels in mm
+const float WHEEL_CIRCUMFERENCE = M_PI * WHEEL_DIAMETER;  // Circumference of the wheels
+const int ENCODER_RESOLUTION = 180;  // Encoder resolution (number of ticks per revolution)
+const float DISTANCE_PER_TICK = WHEEL_CIRCUMFERENCE / ENCODER_RESOLUTION;  // Distance traveled per encoder tick
+
 //declared variables
 bool calkGyroAngle = false;
 bool hasntCrossedLineTwice = false;
@@ -41,10 +49,13 @@ bool doneAvoiding = false;
 bool haveChosenRandomValue = false;
 bool doneAligning = false;
 bool doneTurning = false;
+bool hasStopped = false;
+bool isReversing = false;
 int sensorState = 0;
-long int reverseDuration = 0;
-long int turningDuration = 0;
-long int lineDepartureDelay = 0;
+
+float deltaX = 0.0;
+float deltaY = 0.0;
+
 int randomTurningNumber = 0;
 char mowerMode[3] = " "; // ex. M10
 char manualState = 0;
@@ -57,19 +68,33 @@ int receievedAngle = 0;
 char objectIsClose = ' ';
 char lidarAngle[3] = " "; //ex. 320
 
+//Variables for dead reckoning
+float x = 0.0;
+float y = 0.0;
+float heading = 0.0;
+
+float prev_x = 0.0;
+float prev_y = 0.0;
+
 //function declarations
 void move(int direction, int speed);
 void avoidObstacles();
 void autoMow();
 void manualMow(char direction, char turnDirection);
 void objectDetected();
+void update_position();
+void isr_process_encoder1(void);
+void isr_process_encoder2(void);
+
+void line_model(void);
 
 void setup()
 {
     // put your setup code here, to run once:
     Serial.begin(115200);
     gyro.begin();
-
+    attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
+    attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
     // 12 LED Ring controller is on Auriga D44/PWM
     led_ring.setpin(44);
 
@@ -207,6 +232,8 @@ void loop()
         move(STOP, 0);
         led_ring.setColor(RINGALLLEDS, 50, 0, 0);
         led_ring.show();
+        hasStopped = true;
+
     }
     
     // Serial.println(String(raspCom));
@@ -233,6 +260,45 @@ void loop()
     }
 
     */
+    Encoder_1.loop();
+    Encoder_2.loop();
+    update_position();
+    // Send the position data to the backend server    
+    // Check if x or y has changed
+    if (x != prev_x || y != prev_y)
+    {
+        deltaX = abs(x - prev_x);
+        deltaY = abs(y - prev_y);
+        // if (deltaX != 0.0 || deltaY != 0.0)
+        // {
+        //     Serial.print("deltaX: ");
+        //     Serial.println(deltaX);
+        //     Serial.print("deltaY: ");
+        //     Serial.println(deltaY);
+        // }
+        
+        
+        if (setDurations == false)
+        {
+            sendingDelay = millis() + 100;
+            setDurations = true;
+        }
+        
+
+        if(millis() > sendingDelay){
+            // Send the position data to the backend server    
+            Serial.print(x);
+            Serial.print(",");
+            Serial.print(y);
+            Serial.print(",");
+            Serial.println(heading);
+            setDurations = false;
+        }
+
+        // Update the previous values of x and y
+        prev_x = x;
+        prev_y = y;
+    }
 
 } //--------end of loop--------------
 
@@ -247,30 +313,44 @@ void move(int direction, int speed)
     {
         leftSpeed = -speed;
         rightSpeed = speed;
+        hasStopped = false;
+        isReversing = false;
     }
     else if (direction == REVERSE)
     {
         leftSpeed = speed;
         rightSpeed = -speed;
+        hasStopped = false;
+        isReversing = true;
+
     }
     else if (direction == LEFT)
     {
         leftSpeed = -speed;
         rightSpeed = -speed;
+        hasStopped = false;
+        isReversing = false;
+
     }
     else if (direction == RIGHT)
     {
         leftSpeed = speed;
         rightSpeed = speed;
+        hasStopped = false;
+        isReversing = false;
+
     }
     else if (direction == STOP)
     {
         leftSpeed = 0;
         rightSpeed = 0;
+        hasStopped = true;
+        isReversing = false;
     }
     
     Encoder_1.setMotorPwm(leftSpeed);
     Encoder_2.setMotorPwm(rightSpeed);
+    //update_position();
 }
 
 void avoidObstacles()
@@ -363,7 +443,6 @@ void autoMow()
     //        sensorState = FOUND_OBJECT;
     //    }
        break;
-        
 
     case FOUND_OBJECT:
         objectDetected();
@@ -372,9 +451,6 @@ void autoMow()
     default:
         break;
     }
-
-    Encoder_1.loop();
-    Encoder_2.loop();
 }
 
 void manualMow(char direction, char turnDirection)
@@ -395,54 +471,75 @@ void manualMow(char direction, char turnDirection)
     case 10: // forward
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
+        isReversing = false;
+
         // Serial.println("im moving forward");
         break;
 
-    case 20: // AVOIDING
+    case 20: // Reverse
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED;
+
+        hasStopped = false;
+        isReversing = true;
         // Serial.println("im moving backward");
         break;
 
     case 13: // forward_left
         leftSpeed = -MANUALSPEED;
         rightSpeed = MANUALSPEED / 3;
+        hasStopped = false;
+        isReversing = false;
+
         // Serial.println("im moving forward_left");
         break;
 
     case 14: // forward_right
         leftSpeed = -MANUALSPEED / 3;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
+        isReversing = false;
         // Serial.println("im moving forward_right");
         break;
 
     case 23: // reverse_left
         leftSpeed = MANUALSPEED;
         rightSpeed = -MANUALSPEED / 3;
+        hasStopped = false;
+        isReversing = false;
         // Serial.println("im moving reverse_left");
         break;
 
     case 24: // reverse_right
         leftSpeed = MANUALSPEED / 3;
         rightSpeed = -MANUALSPEED;
+        hasStopped = false;
+        isReversing = false;
         // Serial.println("im moving reverse_right");
         break;
 
     case 03: // moving left
         leftSpeed = -MANUALSPEED;
         rightSpeed = -MANUALSPEED;
+        hasStopped = false;
+        isReversing = false;
         // Serial.println("im moving left")
         break;
 
     case 04: // right
         leftSpeed = MANUALSPEED;
         rightSpeed = MANUALSPEED;
+        hasStopped = false;
+        isReversing = false;
         // Serial.println("im moving right")
         break;
 
     case 00: // stop
         leftSpeed = 0;
         rightSpeed = 0;
+        hasStopped = true;
+        isReversing = false;
         // Serial.println("im stopping");
         break;
 
@@ -451,9 +548,6 @@ void manualMow(char direction, char turnDirection)
     }
     Encoder_1.setMotorPwm(leftSpeed);
     Encoder_2.setMotorPwm(rightSpeed);
-
-    Encoder_1.loop();
-    Encoder_2.loop();
 }
 
 //used when the mower detects an object inside the confined area
@@ -581,4 +675,71 @@ void objectDetected()
     default:
         return;
     }
+}
+void isr_process_encoder1(void)
+{
+  if(digitalRead(Encoder_1.getPortB()) == 0)
+  {
+    Encoder_1.pulsePosMinus();
+  }
+  else
+  {
+    Encoder_1.pulsePosPlus();
+  }
+}
+
+void isr_process_encoder2(void)
+{
+  if(digitalRead(Encoder_2.getPortB()) == 0)
+  {
+    Encoder_2.pulsePosMinus();
+  }
+  else
+  {
+    Encoder_2.pulsePosPlus();
+  }
+}
+
+void update_position(){
+
+    // Get the change in encoder ticks
+    int left_ticks = Encoder_1.getPulsePos();
+    int right_ticks = Encoder_2.getPulsePos();
+
+    // Calculate the distance traveled by each wheel
+    float left_distance = left_ticks * DISTANCE_PER_TICK;
+    float right_distance = right_ticks * DISTANCE_PER_TICK;
+
+    float distance = 0.0;
+    // Calculate the average distance traveled
+    if (left_distance + right_distance == 0 && hasStopped == false)
+    {
+        if (isReversing == true)
+        {
+            distance -= 1.0;
+        }
+        else{
+            distance += 1.0;
+        }
+    }
+    else{
+        distance = (left_distance + right_distance) / 2;
+    }
+    // Update the gyro heading
+    gyro.update();
+    heading = gyro.getAngleZ();
+
+    // Calculate the change in x and y based on the distance and heading
+    float delta_x = distance * cos(heading * M_PI / 180);
+    float delta_y = distance * sin(heading * M_PI / 180);
+    // float delta_x = left_distance * cos(heading * M_PI / 180);
+    // float delta_y = left_distance * sin(heading * M_PI / 180);
+
+    // Update the position
+    x += delta_x;
+    y += delta_y;
+
+    // Reset the encoder ticks
+    Encoder_1.setPulsePos(0);
+    Encoder_2.setPulsePos(0);
 }
