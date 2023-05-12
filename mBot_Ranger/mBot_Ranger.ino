@@ -559,7 +559,7 @@ void manualMow(char direction, char turnDirection)
 //used when the mower detects an object inside the confined area
 void objectDetected()
 {
-    Serial.println("Found object");
+    //Serial.println("Found object");
 
     //get current gyro angle
     gyro.update(); 
@@ -575,8 +575,8 @@ void objectDetected()
 
     if(doneAligning == false)
     {
-        Serial.print("The aovidState is: ");
-        Serial.println(avoidState);
+        // Serial.print("The aovidState is: ");
+        // Serial.println(avoidState);
         avoidState = ALIGNING;
     }
     
@@ -626,8 +626,8 @@ void objectDetected()
         {
             move(STOP,0);
             doneAligning = true;
-            Serial.println("doneAligning first time");
-            Serial.println(doneAligning);
+            // Serial.println("doneAligning first time");
+            // Serial.println(doneAligning);
             avoidState = TAKEPICTURE;
         }
         else  //not aligned yet
@@ -656,7 +656,7 @@ void objectDetected()
         
     case TAKEPICTURE:
 
-       // Serial.write("P",1); //tell pi to take picture
+       Serial.println("P"); //tell pi to take picture
 
         // set next state if pi is done taking picture
        // if (doneTakingPicture == 'K'){
@@ -664,8 +664,8 @@ void objectDetected()
        //     avoidState = AVOIDING;
        // } 
 
-       Serial.println(" ");
-       Serial.println("im taking a picture");
+    //    Serial.println(" ");
+    //    Serial.println("im taking a picture");
        avoidState = AVOIDING;
         break; 
     
