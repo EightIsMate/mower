@@ -1,6 +1,6 @@
 import serial
 import time
-#from send_data_to_backend import upload_positions
+from send_data_to_backend2 import upload_positions
 from serial_communication_controller2 import SerialCommunicationThread
 
 POS_URL = "https://ims8.herokuapp.com/positions/mover"
@@ -24,7 +24,7 @@ def main():
         get_position()
     except Exception as error:
         print("An exception occured: ", error)
-        #main()
+        main()
 
     ser_thread.close()
 

@@ -1,5 +1,3 @@
-import queue
-import time
 import asyncio
 import websockets
 from serial_communication_controller2 import SerialCommunicationThread
@@ -8,6 +6,11 @@ def main():
     ser_thread = SerialCommunicationThread()
     ser_thread.start()
 
+    async def run_server():
+        start_server = websockets.serve(handle_client, '172.20.10.9', 12345) #Elins hotspot
+        #start_server = websockets.serve(handle_client, '172.20.10.8', 12345) #Kyrollos hotspot
+        print('WebSocket server listening for connections...')
+        await start_server
 
 
     async def handle_client(websocket, path):
@@ -23,13 +26,14 @@ def main():
             print(f"Error: {e}")
 
 
-    start_server = websockets.serve(handle_client, '172.20.10.9', 12345) #Elins hotspot
-    #start_server = websockets.serve(handle_client, '172.20.10.8', 12345) #Kyrollos hotspot
 
-
-    print('WebSocket server listening for connections...')
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(run_server())
+    loop.run_forever()
+    #asyncio.set_event_loop(asyncio.new_event_loop())
+    #asyncio.get_event_loop().run_until_complete(start_server)
+    #asyncio.get_event_loop().run_forever()
     ser_thread.close()
 
 if __name__ == "__main__":
