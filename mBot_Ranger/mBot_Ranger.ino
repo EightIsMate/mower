@@ -557,8 +557,7 @@ void manualMow(char direction, char turnDirection)
 }
 
 //used when the mower detects an object inside the confined area
-void objectDetected()
-{
+void objectDetected(){
     //Serial.println("Found object");
 
     //get current gyro angle
@@ -659,14 +658,14 @@ void objectDetected()
        Serial.println("P"); //tell pi to take picture
 
         // set next state if pi is done taking picture
-       // if (doneTakingPicture == 'K'){
-       //     doneTakingPicture = ' ';
-       //     avoidState = AVOIDING;
-       // } 
+       if (doneTakingPicture == 'K'){
+            doneTakingPicture = ' ';
+            avoidState = AVOIDING;
+        } 
 
     //    Serial.println(" ");
     //    Serial.println("im taking a picture");
-       avoidState = AVOIDING;
+       //avoidState = AVOIDING;
         break; 
     
     case AVOIDING:
