@@ -52,6 +52,12 @@ bool doneTurning = false;
 bool hasStopped = false;
 bool isReversing = false;
 int sensorState = 0;
+long int reverseDuration = 0;
+long int turningDuration = 0;
+long int lineDepartureDelay = 0;
+
+bool setDurations = false;
+long int sendingDelay = 0;
 
 float deltaX = 0.0;
 float deltaY = 0.0;
