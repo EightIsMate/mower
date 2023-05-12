@@ -23,13 +23,12 @@ def main():
         camera.capture(image_path)
         print("picture captured")
         #upload_image_to_api(image_path, payload) 
-        ser_thread.write(b'K')
+        ser_thread.write("K")
         
-    pictureCommand = ser_thread.read()
+    #pictureCommand = ser_thread.read()
 
-    if pictureCommand is not None:
-        print("pictureCommand: ", pictureCommand)
-        #take_pic()
+    #if pictureCommand is not None:
+    #    print("pictureCommand: ", pictureCommand)
+    take_pic()
 	
-if __name__ == "__main__":
-    main()
+
