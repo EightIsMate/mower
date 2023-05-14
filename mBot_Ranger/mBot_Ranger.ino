@@ -436,7 +436,7 @@ void autoMow()
         haveChosenRandomValue = false;
         hasntCrossedLineTwice = true;
 
-        //move(FORWARD, 125 );
+        move(FORWARD, 125 );
 
         if (sensorState != lineFinder.readSensors())
         {
