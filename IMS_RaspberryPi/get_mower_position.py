@@ -2,8 +2,6 @@ import serial
 import time
 from send_data_to_backend import upload_positions
 
-POS_URL = "https://ims8.herokuapp.com/positions/mover"
-
 ser = serial.Serial("/dev/ttyUSB0", 115200, timeout = 1)
 
 

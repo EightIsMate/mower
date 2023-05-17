@@ -33,3 +33,26 @@ start_server = websockets.serve(handle_client, '172.20.10.9', 12345) #Elins hots
 print('WebSocket server listening for connections...')
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
+
+
+#while True:
+#	print('Telling the mbot to set the LED ring green')
+#	ser.write(b'1')
+#	
+#	while True:
+#		ack = ser.read()
+#		if ack == b'A':
+#			break
+#	print('Arduino sent back %s' % ack)
+#	
+#	time.sleep(2)
+#	
+#	print('Telling mbot to turn the LED ring off')
+#	ser.write(b'0')
+#	while True:
+#		ack = ser.read()
+#		if ack == b'A':
+#			break
+#	print('Arduino sent back %s' % ack)
+#	
+#	time.sleep(2)
