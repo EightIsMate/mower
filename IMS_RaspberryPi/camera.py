@@ -19,6 +19,10 @@ def main(image_position):
     def take_pic():
         camera = PiCamera()
 
+        #Rotating the camera view 180 deg since it is upside down
+        camera.hflip = True
+        camera.vflip = True
+        
         sleep(2)
         camera.capture(image_path)
         print("picture captured")
