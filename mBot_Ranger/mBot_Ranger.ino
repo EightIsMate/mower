@@ -123,6 +123,14 @@ void setup()
     mowerMode[0] = 'A';
     mowerMode[1] = '0';
     mowerMode[2] = '0';
+
+    update_position();
+    Serial.print(x);
+    Serial.print(",");
+    Serial.print(y);
+    Serial.print(",");
+    Serial.println(heading);
+
 }
 
 // put your main code here, to run repeatedly:
@@ -286,7 +294,7 @@ void loop()
         
         if (setDurations == false)
         {
-            sendingDelay = millis() + 100;
+            sendingDelay = millis() + 1000;
             setDurations = true;
         }
         
