@@ -1,5 +1,4 @@
 import threading
-import queue
 import serial
 import pyudev
 import time

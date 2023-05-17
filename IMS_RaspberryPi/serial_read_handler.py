@@ -1,6 +1,6 @@
-from serial_communication_controller2 import SerialCommunicationThread
-import camera2
-import get_mower_position2
+from serial_communication_controller import SerialCommunicationThread
+import camera
+import get_mower_position
 import time
 position = {}
 
@@ -16,10 +16,10 @@ def main():
             print("serial read handler: ", data)
             if data == "P":
                 #print("Received Picture Command")
-                camera2.main(position)
+                camera.main(position)
             elif is_float_tuple(data):
                 #print("Received Position data")
-                position = get_mower_position2.get_position(data)
+                position = get_mower_position.get_position(data)
 
         time.sleep(1)
 
