@@ -257,30 +257,6 @@ void loop()
         hasStopped = true;
     }
 
-    // Serial.println(String(raspCom));
-    /*
-    //LEDRING
-    switch (raspCom)
-    {
-    case '0':
-      // all LEDs off
-      led_ring.setColor(RINGALLLEDS, 0, 0, 0);
-      led_ring.show();
-      delay(500);
-      Serial.write("A", 1);
-      break;
-
-    case '1':
-      led_ring.setColor(RINGALLLEDS, 0, 50, 0);
-      led_ring.show();
-      delay(500);
-      Serial.write("A", 1);
-    default:
-      Serial.write("E", 1);
-      break;
-    }
-
-    */
     Encoder_1.loop();
     Encoder_2.loop();
     update_position();
@@ -676,7 +652,7 @@ void objectDetected()
         break;
 
     case AVOIDING:
-    
+
         led_ring.setColor(RINGALLLEDS, 100, 100, 100);
         led_ring.show();
         delay(500);
