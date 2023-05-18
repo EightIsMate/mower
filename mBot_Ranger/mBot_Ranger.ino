@@ -88,7 +88,7 @@ float prev_y = 0.0;
 // function declarations
 void move(int direction, int speed);
 void avoidObstacles();
-void autoMow();
+void autoMow(); 
 void manualMow(char direction, char turnDirection);
 void objectDetected();
 void update_position();
@@ -655,19 +655,6 @@ void objectDetected()
                 else
                     move(RIGHT, 200);
             }
-
-            // avoidState = AVOIDING; //this is in this state for debugpurpose only
-
-            // done aligning, reset char and change state
-            //  if(doneAligning == true)
-            //  {
-            //      if(objectIsClose == 'L')
-            //      {
-            //          objectIsClose = ' ';
-            //      }
-
-            //     avoidState = TAKEPICTURE;
-            // }
         }
 
 
@@ -676,21 +663,23 @@ void objectDetected()
     case TAKEPICTURE:
         
         move(STOP, 0);
-        Serial.println("P"); // tell pi to take picture
 
         // set next state if pi is done taking picture
+        Serial.println("P"); // tell pi to take picture
+
         if (doneTakingPicture == 'K')
-        {
+        { 
             doneTakingPicture = ' ';
             avoidState = AVOIDING;
         }
 
-        //    Serial.println(" ");
-        //    Serial.println("im taking a picture");
-        // avoidState = AVOIDING;
         break;
 
     case AVOIDING:
+    
+        led_ring.setColor(RINGALLLEDS, 100, 100, 100);
+        led_ring.show();
+        delay(500);
         avoidState = 0;
         doneAligning = false;
         sensorState = S1_IN_S2_OUT; // to prevent entering to aligning again
