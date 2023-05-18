@@ -50,6 +50,7 @@ bool doneAligning = false;
 bool doneTurning = false;
 bool hasStopped = false;
 bool isReversing = false;
+
 int sensorState = 0;
 long int reverseDuration = 0;
 long int turningDuration = 0;
@@ -93,22 +94,25 @@ void objectDetected();
 void update_position();
 void isr_process_encoder1(void);
 void isr_process_encoder2(void);
+void serialFlush();
 
 void setup()
 {
     // put your setup code here, to run once:
     Serial.begin(115200);
+    Serial.setTimeout(1);
     gyro.begin();
     attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
     attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
     // 12 LED Ring controller is on Auriga D44/PWM
     led_ring.setpin(44);
 
+
     while (!Serial)
     {
         ; // Wait for serial port to connect to raspberry pi
     }
-
+  
     // Set PWM 8KHz
     TCCR1A = _BV(WGM10);
     TCCR1B = _BV(CS11) | _BV(WGM12);
@@ -119,8 +123,8 @@ void setup()
     // read line follower sensor
     sensorState = lineFinder.readSensors();
 
-    // Enter automow mode by default
-    mowerMode[0] = 'A';
+    // Mower is Idle untill app comands it 
+    mowerMode[0] = 'I';
     mowerMode[1] = '0';
     mowerMode[2] = '0';
 
@@ -135,6 +139,7 @@ void setup()
 // put your main code here, to run repeatedly:
 void loop()
 {
+
     while (Serial.available() > 0)
     {
         char data = Serial.read();
@@ -164,6 +169,16 @@ void loop()
                 else if (letter_char[0] == 'A') // mower's move modes
                 {
                     mowerMode[0] = letter_char[0];
+                }
+                else if(letter_char[0] == 'I')
+                {
+                    mowerMode[0] = letter_char[0];
+                    objectIsClose = ' '; //ignore lidar in this state
+                }
+                else if(letter_char[0] == 'R')
+                {
+                    serialFlush();
+                    break;
                 }
             }
 
@@ -204,8 +219,6 @@ void loop()
                     calkGyroAngle = true;
                     sensorState = FOUND_OBJECT;
                 }
-                
-
             }
         }
         else
@@ -214,24 +227,6 @@ void loop()
             i = 0;
         }
     }
-
-    // Serial.print("mowerMode[0]: ");
-    // Serial.println(String(mowerMode[0]));
-    // Serial.print("mowerMode[1]: ");
-    // Serial.println(String(mowerMode[1]));
-    // Serial.print("mowerMode[2]: ");
-    // Serial.println(String(mowerMode[2]));
-
-    // Serial.println(" ");
-
-    // Serial.print("lidarAngle[0]: ");
-    // Serial.println(String(lidarAngle[0]));
-    // Serial.print("lidarAngle[1]: ");
-    // Serial.println(String(lidarAngle[1]));
-    // Serial.print("lidarAngle[2]: ");
-    // Serial.println(String(lidarAngle[2]));
-
-    // Serial.println(" ");
 
     String inputMode = String(mowerMode[0]);
     inputMode.toUpperCase();
@@ -247,6 +242,12 @@ void loop()
         autoMow();
         led_ring.setColor(RINGALLLEDS, 0, 0, 50);
         led_ring.show();
+    }
+    else if (inputMode == "I")
+    {
+        led_ring.setColor(RINGALLLEDS, 10, 250, 10);
+        led_ring.show();
+        move(STOP,0);
     }
     else // wrong input
     {
@@ -771,4 +772,11 @@ void update_position()
     // Reset the encoder ticks
     Encoder_1.setPulsePos(0);
     Encoder_2.setPulsePos(0);
+}
+
+void serialFlush(){
+     while (Serial.available() > 0)
+    {
+        char data = Serial.read();
+    }
 }
