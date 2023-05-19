@@ -50,6 +50,7 @@ bool doneAligning = false;
 bool doneTurning = false;
 bool hasStopped = false;
 bool isReversing = false;
+bool isFirstTimeInTAKEPICTURE = true;
 
 int sensorState = 0;
 long int reverseDuration = 0;
@@ -88,7 +89,7 @@ float prev_y = 0.0;
 // function declarations
 void move(int direction, int speed);
 void avoidObstacles();
-void autoMow(); 
+void autoMow();
 void manualMow(char direction, char turnDirection);
 void objectDetected();
 void update_position();
@@ -107,12 +108,11 @@ void setup()
     // 12 LED Ring controller is on Auriga D44/PWM
     led_ring.setpin(44);
 
-
     while (!Serial)
     {
         ; // Wait for serial port to connect to raspberry pi
     }
-  
+
     // Set PWM 8KHz
     TCCR1A = _BV(WGM10);
     TCCR1B = _BV(CS11) | _BV(WGM12);
@@ -123,17 +123,17 @@ void setup()
     // read line follower sensor
     sensorState = lineFinder.readSensors();
 
-    // Mower is Idle untill app comands it 
+    // Mower is Idle untill app comands it
     mowerMode[0] = 'I';
     mowerMode[1] = '0';
     mowerMode[2] = '0';
 
-    update_position();
-    Serial.print(x);
-    Serial.print(",");
-    Serial.print(y);
-    Serial.print(",");
-    Serial.println(heading);
+    // update_position();
+    // Serial.print(x);
+    // Serial.print(",");
+    // Serial.print(y);
+    // Serial.print(",");
+    // Serial.println(heading);
 }
 
 // put your main code here, to run repeatedly:
@@ -170,12 +170,12 @@ void loop()
                 {
                     mowerMode[0] = letter_char[0];
                 }
-                else if(letter_char[0] == 'I')
+                else if (letter_char[0] == 'I')
                 {
                     mowerMode[0] = letter_char[0];
-                    objectIsClose = ' '; //ignore lidar in this state
+                    objectIsClose = ' '; // ignore lidar in this state
                 }
-                else if(letter_char[0] == 'R')
+                else if (letter_char[0] == 'R')
                 {
                     serialFlush();
                     break;
@@ -198,14 +198,15 @@ void loop()
                 // fill array with bits to determine lidar angle
                 if (i < 3)
                 {
-                    if (data != 'L')
+                    if (data != 'L' && data != 'l')
                     {
                         lidarAngle[i] = data;
+                        // Serial.print("lidarAngle: ");
                         // Serial.println(lidarAngle[i]);
                         i += 1;
                     }
                 }
-                else 
+                else
                 {
                     // Serial.print("Before: ");
                     // Serial.println(detectedBySensor);
@@ -215,7 +216,7 @@ void loop()
                     objectIsClose = ' ';
                 }
                 if (i == 3)
-                {          
+                {
                     calkGyroAngle = true;
                     sensorState = FOUND_OBJECT;
                 }
@@ -243,11 +244,11 @@ void loop()
         led_ring.setColor(RINGALLLEDS, 0, 0, 50);
         led_ring.show();
     }
-    else if (inputMode == "I")
+    else if (inputMode == "I") // Idle mode
     {
         led_ring.setColor(RINGALLLEDS, 10, 250, 10);
         led_ring.show();
-        move(STOP,0);
+        move(STOP, 0);
     }
     else // wrong input
     {
@@ -559,7 +560,7 @@ void objectDetected()
 
     // avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
 
-    if (doneAligning == false )
+    if (doneAligning == false)
     {
         avoidState = ALIGNING;
     }
@@ -575,9 +576,11 @@ void objectDetected()
             avoidState = TAKEPICTURE;
             doneAligning = true;
         }
-        else{
+        else
+        {
             // Serial.print("currentgyroAngleZ: ");
             // Serial.println(CurrentgyroAngleZ);
+
             float getLidarAngle;
             float turningGyroAngleZ;    // converting a lidarangle to a gyroangle
             float newDesiredGyroAngleZ; // the desired angle that we want to turn to
@@ -633,18 +636,21 @@ void objectDetected()
             }
         }
 
-
         break;
 
     case TAKEPICTURE:
-        
+
         move(STOP, 0);
 
-        // set next state if pi is done taking picture
-        Serial.println("P"); // tell pi to take picture
+        if (isFirstTimeInTAKEPICTURE == true)
+        {
+            // set next state if pi is done taking picture
+            Serial.println("P"); // tell pi to take picture
+            isFirstTimeInTAKEPICTURE = false;
+        }
 
         if (doneTakingPicture == 'K')
-        { 
+        {
             doneTakingPicture = ' ';
             avoidState = AVOIDING;
         }
@@ -652,10 +658,10 @@ void objectDetected()
         break;
 
     case AVOIDING:
-
         led_ring.setColor(RINGALLLEDS, 100, 100, 100);
         led_ring.show();
         delay(500);
+        isFirstTimeInTAKEPICTURE = true;
         avoidState = 0;
         doneAligning = false;
         sensorState = S1_IN_S2_OUT; // to prevent entering to aligning again
@@ -739,8 +745,9 @@ void update_position()
     Encoder_2.setPulsePos(0);
 }
 
-void serialFlush(){
-     while (Serial.available() > 0)
+void serialFlush()
+{
+    while (Serial.available() > 0)
     {
         char data = Serial.read();
     }
