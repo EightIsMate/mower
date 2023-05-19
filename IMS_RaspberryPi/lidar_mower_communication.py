@@ -128,7 +128,7 @@ def main():
 			process_data(scan_data)
 			if detected_angles:
 				calculateAverageAngle(detected_angles)
-				if object_detected_counter >= 10:
+				if object_detected_counter >= 6:
 					print("Object is detected!")
 					send_average_angle(ser_thread)
 				detected_angles.clear()
