@@ -31,9 +31,6 @@ def main():
     asyncio.set_event_loop(loop)
     loop.create_task(run_server())
     loop.run_forever()
-    #asyncio.set_event_loop(asyncio.new_event_loop())
-    #asyncio.get_event_loop().run_until_complete(start_server)
-    #asyncio.get_event_loop().run_forever()
     ser_thread.close()
 
 if __name__ == "__main__":

@@ -6,6 +6,8 @@ from adafruit_rplidar import RPLidar, RPLidarException
 import numpy as np
 from serial_communication_controller import SerialCommunicationThread
 
+ser_thread = None
+
 def detect_serial_devices():
 	global lidar_device_port
 	global mower_device_port
@@ -13,57 +15,17 @@ def detect_serial_devices():
 	global ser
 	context = pyudev.Context()
 	devices = context.list_devices(subsystem='tty')
-	serial_devices = []
 	for device in devices:
 		try:
 			vendor_id = device.get('ID_VENDOR_ID')
 			product_id = device.get('ID_MODEL_ID')
 			if vendor_id == '10c4' and product_id == 'ea60':
 				# LIDAR detected
-				# serial_devices.append(device.device_node)
 				lidar_device_port = device.device_node
 				lidar = RPLidar(None, lidar_device_port, timeout=3)
 				print("LIDAR device: {}".format(lidar_device_port))
-#			elif vendor_id == '1a86' and product_id == '7523':
-#				# mower detected
-#				mower_device_port = device.device_node
-#				ser = serial.Serial(mower_device_port, 115200, timeout=1)
-#				print("Mower device: {}".format(mower_device_port))
-#				ser.setDTR(False)
-#				time.sleep(1)
-#				ser.flushInput()
-#				ser.setDTR(True)
-#				time.sleep(2)
-				# serial_devices.append(device.device_node)
 		except:
 			pass
-# return serial_devices
-
-# def connect_serial_devices():
-
-# global lidar
-# global ser
-# while True:
-# serial_devices = detect_serial_devices()
-# if len(serial_devices) == 2: # change to 1 for only 1 port, else 2
-			# Both devices detected
-# lidar_device_port = serial_devices[1]
-			# mower_device_port = serial_devices[1]
-# break
-# time.sleep(1)
-	# ser = serial.Serial(mower_device_port, 115200, timeout = 1)
-
-	# ser.setDTR(False)
-	# time.sleep(1)
-	# ser.flushInput()
-	# ser.setDTR(True)
-	# time.sleep(2)
-
-	# lidar = RPLidar(None, lidar_device_port, timeout = 3)
-# print("LIDAR device: {}".format(lidar_device_port))
-	# print("Mower device: {}".format(mower_device_port))
-
-# connect_serial_devices()
 
 
 
@@ -75,11 +37,6 @@ def process_data(data):
 			global averageLidarAngle
 			if data[i] < 300 and data[i] != 0: #Object closer than 30 cm
 			    detected_angles.append(i)
-			    #print('%d: Got %d mm measurments' % (i, data[i]))
-			    #data[i] = 0
-			    #take_pic()
-			    #ser.write(b'L') # notify mower that an object is detected
-		    #print('%d: Got %d mm measurments' % (i, data[i]))
 
 def compare_angle():
 	global averageAngle
@@ -138,14 +95,13 @@ def send_average_angle(ser_thread):
 	ser_thread.write(send_lidar_msg)
 	#ser.write(send_lidar_msg.encode('utf-8')) # notify mower that an object is detected
 	object_detected_counter = 0
-	time.sleep(3) 
+	time.sleep(5) 
 
 def main():
-	ser_thread = SerialCommunicationThread()
-	ser_thread.start()
+	global ser_thread
 	global lidar
 	global scan_data
-	scan_data = [0]*360
+	scan_data = [0] * 360
 	detect_serial_devices()
 
 	global detected_angles
@@ -158,10 +114,14 @@ def main():
 	global object_detected_counter 
 	object_detected_counter = 0
 	try:
+		if ser_thread is None:
+			ser_thread = SerialCommunicationThread()
+			ser_thread.start()
+
 		#print(lidar.info)
 		for scan in lidar.iter_scans():
 			for (_, angle, distance) in scan:
-			   # print("angle: ", angle)
+			   	#print("angle: ", angle)
 				#print("distance: ", distance)
 				#print(f'Angle: {angle} Distance: {distance}')
 				scan_data[min([359, floor(angle)])] = distance
@@ -179,10 +139,8 @@ def main():
 		lidar.stop()
 		lidar.stop_motor()
 		lidar.disconnect()
-		#connect_serial_devices()
 		detect_serial_devices()
 		scan_data = [0] * 360
-		#lidar = RPLidar(None, lidar_device_port, timeout = 3)
 		main()
 
 	except KeyboardInterrupt:
@@ -195,4 +153,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-#lidar.stop_motor()

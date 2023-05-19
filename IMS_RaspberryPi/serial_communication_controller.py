@@ -12,27 +12,41 @@ class SerialCommunicationThread(threading.Thread):
         self.ser = None
      
     def run(self):
-        self.ser = serial.Serial(self.port, self.baudrate, timeout = self.timeout)
-        self.ser.setDTR(False)
-        time.sleep(1)
-        self.ser.flushInput()
-        self.ser.setDTR(True)
-        time.sleep(2)
+        try:
+            self.ser = serial.Serial(self.port, self.baudrate, timeout = self.timeout)
+            self.ser.setDTR(False)
+            time.sleep(1)
+            self.ser.flushInput()
+            self.ser.setDTR(True)
+            time.sleep(2)
+        except serial.SerialException as e:
+            print(f"Serial port error: {str(e)}")
     
     def write(self, message):
         if self.ser is not None:
-            self.ser.write(message.encode())
-            self.ser.flush()
+            try:
+                self.ser.write(message.encode())
+                print(f"Have sent {message} to mower")
+                self.ser.flush()
+            except serial.SerialException as e:
+                print(f"Serial port error: {str(e)}")
 
     def read(self):
         if self.ser is not None and self.ser.in_waiting > 0:
-            line = self.ser.readline().decode('utf-8').rstrip()
-            return line 
+            try:
+                line = self.ser.readline().decode('utf-8').rstrip()
+                return line 
+            except serial.SerialException as e:
+                print(f"Serial port error: {str(e)}")
         return None
-
+    
     def close(self):
         if self.ser is not None:
-            self.ser.close() 
+            try:
+                self.ser.close()
+
+            except serial.SerialException as e:
+                print(f"Serial port error: {str(e)}")
 
 def find_mower_port():
     context = pyudev.Context()

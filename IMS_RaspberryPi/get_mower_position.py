@@ -8,11 +8,10 @@ def get_position(position):
             #print("Mower position: ",line)
             payload = {}
             payload = {"position_horizontal": line.split(',')[0], "position_vertical": line.split(',')[1]}
-            #print(payload)
+            print(payload)
             upload_positions(payload)
             return payload
 
     except Exception as error:
         print("An exception occured: ", error)
-        #get_position()
 

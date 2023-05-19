@@ -8,17 +8,15 @@ def main():
     ser_thread = SerialCommunicationThread()
     ser_thread.start()
     global position
-
     while True:
         data = ser_thread.read()
 
         if data is not None:
             print("serial read handler: ", data)
             if data == "P":
-                #print("Received Picture Command")
                 camera.main(position)
+                ser_thread.write("K\n")
             elif is_float_tuple(data):
-                #print("Received Position data")
                 position = get_mower_position.get_position(data)
 
         time.sleep(1)
@@ -37,4 +35,7 @@ def is_float_tuple(data):
         return False
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        main()
