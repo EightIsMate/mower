@@ -320,6 +320,8 @@ void move(int direction, int speed)
 
 void avoidObstacles()
 {
+        led_ring.setColor(RINGALLLEDS, 100, 100, 100);
+        led_ring.show();
     if (avoidObstaclesInit == false)
     {
         avoidObstaclesInit = true;
@@ -569,20 +571,14 @@ void objectDetected()
             doneTakingPicture = ' ';
             avoidState = AVOIDING;
         }
-
         break;
 
     case AVOIDING:
-        led_ring.setColor(RINGALLLEDS, 100, 100, 100);
-        led_ring.show();
-        delay(500);
         isFirstTimeInTAKEPICTURE = true;
         avoidState = 0;
         doneAligning = false;
         sensorState = S1_IN_S2_OUT; // to prevent entering to aligning again
-        // doneAligning = false;
         avoidObstacles();
-        // break;
         break;
 
     default:
