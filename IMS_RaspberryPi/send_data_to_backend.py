@@ -13,5 +13,3 @@ def upload_image_to_api(image, payload):
 	image_file = [('file',('myfile.jpg',open(image,'rb'),'image/jpeg'))]
 	req = requests.request("POST", IMG_URL, auth = ("username", "password"), data = payload, files = image_file)
 	print("Status: ", req.status_code, "req.txt = ", req.text)
-	number_of_checks = 0
-	recheck = int(time.time())+ 15

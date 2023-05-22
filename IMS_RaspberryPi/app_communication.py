@@ -25,8 +25,6 @@ def main():
         except Exception as e:
             print(f"Error: {e}")
 
-
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.create_task(run_server())

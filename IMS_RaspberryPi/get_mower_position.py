@@ -5,7 +5,6 @@ def get_position(position):
         line = position
 
         if line is not None and line.isalpha() is False:
-            #print("Mower position: ",line)
             payload = {}
             payload = {"position_horizontal": line.split(',')[0], "position_vertical": line.split(',')[1]}
             print(payload)

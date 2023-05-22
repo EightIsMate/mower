@@ -12,7 +12,6 @@ def main():
         data = ser_thread.read()
 
         if data is not None:
-            print("serial read handler: ", data)
             if data == "P":
                 camera.main(position)
                 ser_thread.write("K\n")

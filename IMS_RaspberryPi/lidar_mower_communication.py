@@ -27,10 +27,6 @@ def detect_serial_devices():
 		except:
 			pass
 
-
-
-
-
 def process_data(data):
 	for i in range(len(data)):
 		if i < 45 or i >= 315:
@@ -90,10 +86,8 @@ def send_average_angle(ser_thread):
 	global object_detected_counter
 	averageAngle = floor(averageAngle)
 	send_lidar_msg = "L" + f'{averageAngle:03d}' + "\n"
-	#send_lidar_msg = send_lidar_msg.encode('utf-8')
 	print(send_lidar_msg)
 	ser_thread.write(send_lidar_msg)
-	#ser.write(send_lidar_msg.encode('utf-8')) # notify mower that an object is detected
 	object_detected_counter = 0
 	time.sleep(5) 
 
@@ -118,12 +112,8 @@ def main():
 			ser_thread = SerialCommunicationThread()
 			ser_thread.start()
 
-		#print(lidar.info)
 		for scan in lidar.iter_scans():
 			for (_, angle, distance) in scan:
-			   	#print("angle: ", angle)
-				#print("distance: ", distance)
-				#print(f'Angle: {angle} Distance: {distance}')
 				scan_data[min([359, floor(angle)])] = distance
 			process_data(scan_data)
 			if detected_angles:

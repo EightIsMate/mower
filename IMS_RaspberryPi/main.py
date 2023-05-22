@@ -13,15 +13,14 @@ serial_read_handler_thread = threading.Thread(target = serial_read_handler)
 ser_thread = SerialCommunicationThread()
 
 try:
-
     ser_thread.start()
     #start threads
     app_thread.start()
     lidar_thread.start()
     serial_read_handler_thread.start()
     #For deugging without the app
-    time.sleep(2)
-    ser_thread.write("A00\n")
+    # time.sleep(2)
+    # ser_thread.write("A00\n")
 except KeyboardInterrupt:
     print('Stoping.')  
     app_thread.join()
