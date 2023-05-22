@@ -60,9 +60,6 @@ long int lineDepartureDelay = 0;
 bool setDurations = false;
 long int sendingDelay = 0;
 
-float deltaX = 0.0;
-float deltaY = 0.0;
-
 int randomTurningNumber = 0;
 char mowerMode[3] = " "; // ex. M10
 char manualState = 0;
@@ -99,7 +96,6 @@ void serialFlush();
 
 void setup()
 {
-    // put your setup code here, to run once:
     Serial.begin(115200);
     Serial.setTimeout(1);
     gyro.begin();
@@ -127,16 +123,8 @@ void setup()
     mowerMode[0] = 'I';
     mowerMode[1] = '0';
     mowerMode[2] = '0';
-
-    // update_position();
-    // Serial.print(x);
-    // Serial.print(",");
-    // Serial.print(y);
-    // Serial.print(",");
-    // Serial.println(heading);
 }
 
-// put your main code here, to run repeatedly:
 void loop()
 {
 
@@ -201,18 +189,12 @@ void loop()
                     if (data != 'L' && data != 'l')
                     {
                         lidarAngle[i] = data;
-                        // Serial.print("lidarAngle: ");
-                        // Serial.println(lidarAngle[i]);
                         i += 1;
                     }
                 }
                 else
                 {
-                    // Serial.print("Before: ");
-                    // Serial.println(detectedBySensor);
                     detectedBySensor = objectIsClose;
-                    // Serial.print("After: ");
-                    // Serial.println(detectedBySensor);
                     objectIsClose = ' ';
                 }
                 if (i == 3)
@@ -265,15 +247,6 @@ void loop()
     // Check if x or y has changed
     if (x != prev_x || y != prev_y)
     {
-        deltaX = abs(x - prev_x);
-        deltaY = abs(y - prev_y);
-        // if (deltaX != 0.0 || deltaY != 0.0)
-        // {
-        //     Serial.print("deltaX: ");
-        //     Serial.println(deltaX);
-        //     Serial.print("deltaY: ");
-        //     Serial.println(deltaY);
-        // }
 
         if (setDurations == false)
         {
@@ -343,7 +316,6 @@ void move(int direction, int speed)
 
     Encoder_1.setMotorPwm(leftSpeed);
     Encoder_2.setMotorPwm(rightSpeed);
-    // update_position();
 }
 
 void avoidObstacles()
@@ -448,7 +420,6 @@ void autoMow()
 
 void manualMow(char direction, char turnDirection)
 {
-    // Serial.println("im mowing manually now hihi");
 
     int intDirection = String(direction).toInt();
 
@@ -466,8 +437,6 @@ void manualMow(char direction, char turnDirection)
         rightSpeed = MANUALSPEED;
         hasStopped = false;
         isReversing = false;
-
-        // Serial.println("im moving forward");
         break;
 
     case 20: // Reverse
@@ -476,40 +445,6 @@ void manualMow(char direction, char turnDirection)
 
         hasStopped = false;
         isReversing = true;
-        // Serial.println("im moving backward");
-        break;
-
-    case 13: // forward_left
-        leftSpeed = -MANUALSPEED;
-        rightSpeed = MANUALSPEED / 3;
-        hasStopped = false;
-        isReversing = false;
-
-        // Serial.println("im moving forward_left");
-        break;
-
-    case 14: // forward_right
-        leftSpeed = -MANUALSPEED / 3;
-        rightSpeed = MANUALSPEED;
-        hasStopped = false;
-        isReversing = false;
-        // Serial.println("im moving forward_right");
-        break;
-
-    case 23: // reverse_left
-        leftSpeed = MANUALSPEED;
-        rightSpeed = -MANUALSPEED / 3;
-        hasStopped = false;
-        isReversing = false;
-        // Serial.println("im moving reverse_left");
-        break;
-
-    case 24: // reverse_right
-        leftSpeed = MANUALSPEED / 3;
-        rightSpeed = -MANUALSPEED;
-        hasStopped = false;
-        isReversing = false;
-        // Serial.println("im moving reverse_right");
         break;
 
     case 03: // moving left
@@ -517,7 +452,6 @@ void manualMow(char direction, char turnDirection)
         rightSpeed = -MANUALSPEED;
         hasStopped = false;
         isReversing = false;
-        // Serial.println("im moving left")
         break;
 
     case 04: // right
@@ -525,7 +459,6 @@ void manualMow(char direction, char turnDirection)
         rightSpeed = MANUALSPEED;
         hasStopped = false;
         isReversing = false;
-        // Serial.println("im moving right")
         break;
 
     case 00: // stop
@@ -533,7 +466,6 @@ void manualMow(char direction, char turnDirection)
         rightSpeed = 0;
         hasStopped = true;
         isReversing = false;
-        // Serial.println("im stopping");
         break;
 
     default:
@@ -546,19 +478,11 @@ void manualMow(char direction, char turnDirection)
 // used when the mower detects an object inside the confined area
 void objectDetected()
 {
-    // Serial.println("Found object");
 
     // get current gyro angle
     gyro.update();
 
-    // print distance from low object detected by ultrasonic sensor
-    //  Serial.print("Ultrasonic distance : ");
-    //  Serial.print(ultraSensor.distanceCm());
-    //  Serial.println(" cm");
-
     float CurrentgyroAngleZ = gyro.getAngleZ();
-
-    // avoidState = AVOIDING; // For debugging since we do not have code in ALIGNING state
 
     if (doneAligning == false)
     {
@@ -578,8 +502,6 @@ void objectDetected()
         }
         else
         {
-            // Serial.print("currentgyroAngleZ: ");
-            // Serial.println(CurrentgyroAngleZ);
 
             float getLidarAngle;
             float turningGyroAngleZ;    // converting a lidarangle to a gyroangle
@@ -612,18 +534,11 @@ void objectDetected()
                 newDesiredGyroAngleZ + 360;
             }
 
-            // Serial.print("The desired angle of Gyroscope is :");
-            // Serial.println(newDesiredGyroAngleZ);
-            // Serial.print("Current angle of Z:");
-            // Serial.println(CurrentgyroAngleZ);
-
             // if already aligned
             if (CurrentgyroAngleZ > (newDesiredGyroAngleZ - 2) && CurrentgyroAngleZ < (newDesiredGyroAngleZ + 2))
             {
                 move(STOP, 0);
                 doneAligning = true;
-                // Serial.println("doneAligning first time");
-                // Serial.println(doneAligning);
                 avoidState = TAKEPICTURE;
             }
             else // not aligned yet
